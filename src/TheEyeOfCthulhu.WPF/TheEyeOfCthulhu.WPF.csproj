@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TheEyeOfCthulhu.WPF</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TheEyeOfCthulhu.Core\TheEyeOfCthulhu.Core.csproj" />
+    <ProjectReference Include="..\TheEyeOfCthulhu.Sources\TheEyeOfCthulhu.Sources.csproj" />
+  </ItemGroup>
+
+</Project>

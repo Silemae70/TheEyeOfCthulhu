@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TheEyeOfCthulhu.Console</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TheEyeOfCthulhu.Core\TheEyeOfCthulhu.Core.csproj" />
+    <ProjectReference Include="..\TheEyeOfCthulhu.Sources\TheEyeOfCthulhu.Sources.csproj" />
+  </ItemGroup>
+
+</Project>

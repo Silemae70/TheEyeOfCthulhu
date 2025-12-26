@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TheEyeOfCthulhu.Lab</RootNamespace>
+    <ApplicationIcon></ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TheEyeOfCthulhu.Core\TheEyeOfCthulhu.Core.csproj" />
+    <ProjectReference Include="..\TheEyeOfCthulhu.Sources\TheEyeOfCthulhu.Sources.csproj" />
+    <ProjectReference Include="..\TheEyeOfCthulhu.WPF\TheEyeOfCthulhu.WPF.csproj" />
+  </ItemGroup>
+
+</Project>
