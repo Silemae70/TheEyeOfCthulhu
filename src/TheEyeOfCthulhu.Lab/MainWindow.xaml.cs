@@ -49,6 +49,60 @@ public partial class MainWindow : Window
         VisionView.FrameProcessed += OnFrameProcessed;
         
         Closing += OnWindowClosing;
+        Loaded += OnWindowLoaded;
+    }
+
+    private void OnWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        // Afficher le wizard au premier démarrage
+        if (ShouldShowWizard())
+        {
+            ShowHelpWizard();
+        }
+    }
+
+    private bool ShouldShowWizard()
+    {
+        // Vérifier si l'utilisateur a déjà vu le wizard
+        var settingsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TheEyeOfCthulhu",
+            "settings.txt");
+        
+        if (File.Exists(settingsPath))
+        {
+            var content = File.ReadAllText(settingsPath);
+            return !content.Contains("wizard_shown=true");
+        }
+        
+        return true;
+    }
+
+    private void SaveWizardSetting(bool dontShowAgain)
+    {
+        if (!dontShowAgain) return;
+        
+        var settingsDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TheEyeOfCthulhu");
+        
+        Directory.CreateDirectory(settingsDir);
+        
+        var settingsPath = Path.Combine(settingsDir, "settings.txt");
+        File.WriteAllText(settingsPath, "wizard_shown=true");
+    }
+
+    private void ShowHelpWizard()
+    {
+        var wizard = new HelpWizardWindow { Owner = this };
+        wizard.ShowDialog();
+        
+        SaveWizardSetting(wizard.DontShowAgain);
+    }
+
+    private void HelpButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowHelpWizard();
     }
 
     private void CreatePipeline()
@@ -225,6 +279,8 @@ public partial class MainWindow : Window
             ClearElderSignButton.IsEnabled = true;
             SaveElderSignButton.IsEnabled = true;
             EnableElderSignCheckBox.IsEnabled = true;
+            AutoContourButton.IsEnabled = true;
+            BackgroundRemoverButton.IsEnabled = true;
             
             var roiText = hasRoi ? $" (from ROI {roiInfo.Width}x{roiInfo.Height})" : " (full frame)";
             ElderSignResultText.Text = $"🔯 ElderSign captured{roiText}! Enable detection to start.";
@@ -264,6 +320,8 @@ public partial class MainWindow : Window
         EnableElderSignCheckBox.IsEnabled = false;
         ClearElderSignButton.IsEnabled = false;
         SaveElderSignButton.IsEnabled = false;
+        AutoContourButton.IsEnabled = false;
+        BackgroundRemoverButton.IsEnabled = false;
         
         ElderSignPreview.Visibility = Visibility.Collapsed;
         ElderSignImage.Source = null;
@@ -381,6 +439,245 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ImportPngButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Import PNG with transparency",
+                DefaultExt = ".png",
+                Filter = "PNG Images|*.png"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Nettoyer l'ancien
+                ClearElderSign();
+
+                // Charger le PNG avec transparence
+                var name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                _elderSign = ElderSignFactory.FromPngWithAlpha(name, dialog.FileName);
+                _elderSign.MinScore = MinScoreSlider.Value;
+
+                // Créer le processeur
+                IElderSignMatcher matcher = _selectedMatcherType switch
+                {
+                    1 => new FeatureSignMatcher(FeatureDetectorType.ORB),
+                    2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE),
+                    _ => new TemplateSignMatcher()
+                };
+                
+                _elderSignProcessor = new ElderSignProcessor(matcher);
+                _elderSignProcessor.AddElderSign(_elderSign);
+                _elderSignProcessor.DrawMatches = true;
+                _elderSignProcessor.ShowLabel = true;
+                _elderSignProcessor.IsEnabled = false;
+
+                // Afficher la preview
+                ShowElderSignPreview(_elderSign.Template);
+                
+                // Activer les contrôles
+                ClearElderSignButton.IsEnabled = true;
+                SaveElderSignButton.IsEnabled = true;
+                EnableElderSignCheckBox.IsEnabled = true;
+                AutoContourButton.IsEnabled = false; // Déjà un contour du PNG
+                
+                var contourInfo = _elderSign.ContourPoints != null 
+                    ? $" with {_elderSign.ContourPoints.Length} contour points" 
+                    : "";
+                ElderSignResultText.Text = $"🖼️ Imported '{name}' ({_elderSign.Width}x{_elderSign.Height}){contourInfo}";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Import failed: {ex.Message}\n\nMake sure the PNG has an alpha channel (transparency).", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void AutoContourButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_elderSign == null) return;
+
+        try
+        {
+            // Recréer l'ElderSign avec auto-contour
+            var oldSign = _elderSign;
+            _elderSign = ElderSignFactory.FromFrameWithAutoContour(oldSign.Name, oldSign.Template);
+            _elderSign.MinScore = MinScoreSlider.Value;
+            
+            // Mettre à jour le processeur
+            if (_elderSignProcessor != null)
+            {
+                _elderSignProcessor.ClearElderSigns();
+                _elderSignProcessor.AddElderSign(_elderSign);
+            }
+            
+            oldSign.Dispose();
+
+            var contourInfo = _elderSign.ContourPoints != null 
+                ? $"✨ Contour extracted: {_elderSign.ContourPoints.Length} points" 
+                : "⚠️ No contour found";
+            ElderSignResultText.Text = contourInfo;
+            
+            // Désactiver le bouton (déjà fait)
+            AutoContourButton.IsEnabled = false;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Auto contour failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void BackgroundRemoverButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_elderSign == null) return;
+
+        try
+        {
+            var window = new BackgroundRemoverWindow(_elderSign.Template)
+            {
+                Owner = this
+            };
+
+            if (window.ShowDialog() == true && window.Applied)
+            {
+                ApplyBackgroundRemovalResult(window);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Background remover failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LoadImageForRemovalButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Load Image for Background Removal",
+                Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.tiff|All files|*.*"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Charger l'image avec OpenCV
+                using var mat = OpenCvSharp.Cv2.ImRead(dialog.FileName, OpenCvSharp.ImreadModes.Color);
+                
+                if (mat.Empty())
+                {
+                    MessageBox.Show("Failed to load image", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Convertir en Frame
+                var frame = TheEyeOfCthulhu.Sources.Processors.FrameMatConverter.ToFrame(mat, 0);
+
+                // Ouvrir le Background Remover
+                var window = new BackgroundRemoverWindow(frame)
+                {
+                    Owner = this
+                };
+
+                if (window.ShowDialog() == true && window.Applied)
+                {
+                    // Nettoyer l'ancien ElderSign
+                    ClearElderSign();
+
+                    // Créer le nouvel ElderSign avec le masque/contour
+                    var name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                    _elderSign = new ElderSign(name, frame)
+                    {
+                        MinScore = MinScoreSlider.Value
+                    };
+
+                    // Appliquer masque et contour
+                    if (window.ResultMask != null)
+                    {
+                        _elderSign.SetMask(window.ResultMask);
+                    }
+                    
+                    if (window.ResultContour != null && window.ResultContour.Length >= 3)
+                    {
+                        _elderSign.SetContour(window.ResultContour);
+                    }
+
+                    // Créer le processeur
+                    IElderSignMatcher matcher = _selectedMatcherType switch
+                    {
+                        1 => new FeatureSignMatcher(FeatureDetectorType.ORB),
+                        2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE),
+                        _ => new TemplateSignMatcher()
+                    };
+                    
+                    _elderSignProcessor = new ElderSignProcessor(matcher);
+                    _elderSignProcessor.AddElderSign(_elderSign);
+                    _elderSignProcessor.DrawMatches = true;
+                    _elderSignProcessor.ShowLabel = true;
+                    _elderSignProcessor.IsEnabled = false;
+
+                    // Afficher la preview
+                    ShowElderSignPreview(_elderSign.Template);
+                    
+                    // Activer les contrôles
+                    ClearElderSignButton.IsEnabled = true;
+                    SaveElderSignButton.IsEnabled = true;
+                    EnableElderSignCheckBox.IsEnabled = true;
+                    AutoContourButton.IsEnabled = false;
+                    BackgroundRemoverButton.IsEnabled = false;
+                    
+                    var contourInfo = _elderSign.ContourPoints != null 
+                        ? $" with {_elderSign.ContourPoints.Length} contour points" 
+                        : "";
+                    ElderSignResultText.Text = $"🖼️ Loaded '{name}'{contourInfo}";
+                    ElderSignResultText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
+                }
+
+                frame.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load image: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ApplyBackgroundRemovalResult(BackgroundRemoverWindow window)
+    {
+        if (_elderSign == null) return;
+
+        // Appliquer le masque et contour
+        if (window.ResultMask != null)
+        {
+            _elderSign.SetMask(window.ResultMask);
+        }
+        
+        if (window.ResultContour != null && window.ResultContour.Length >= 3)
+        {
+            _elderSign.SetContour(window.ResultContour);
+        }
+        
+        // Mettre à jour le processeur
+        if (_elderSignProcessor != null)
+        {
+            _elderSignProcessor.ClearElderSigns();
+            _elderSignProcessor.AddElderSign(_elderSign);
+        }
+        
+        var contourInfo = _elderSign.ContourPoints != null 
+            ? $"🪄 Background removed! Contour: {_elderSign.ContourPoints.Length} points" 
+            : "🪄 Background removed!";
+        ElderSignResultText.Text = contourInfo;
+        ElderSignResultText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
+        
+        // Désactiver les boutons de contour
+        AutoContourButton.IsEnabled = false;
+        BackgroundRemoverButton.IsEnabled = false;
+    }
+
     private void EnableElderSignCheckBox_Changed(object sender, RoutedEventArgs e)
     {
         if (_elderSignProcessor == null || _pipeline == null) return;
@@ -402,13 +699,24 @@ public partial class MainWindow : Window
                 EnablePipelineCheckBox.IsChecked = true;
             }
             
+            // Activer l'option overlay
+            ShowTemplateOverlayCheckBox.IsEnabled = true;
+            
             ElderSignResultText.Text = "🔍 Searching...";
         }
         else
         {
             _elderSignProcessor.IsEnabled = false;
+            ShowTemplateOverlayCheckBox.IsEnabled = false;
             ElderSignResultText.Text = "Detection disabled";
         }
+    }
+
+    private void ShowTemplateOverlayCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_elderSignProcessor == null) return;
+        
+        _elderSignProcessor.DrawTemplateOverlay = ShowTemplateOverlayCheckBox.IsChecked == true;
     }
 
     private void MinScoreSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

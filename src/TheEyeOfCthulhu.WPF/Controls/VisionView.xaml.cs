@@ -584,7 +584,20 @@ public partial class VisionView : UserControl
 
     private void OnSourceStateChanged(object? sender, SourceState state)
     {
-        Dispatcher.BeginInvoke(() => UpdateStatus(state.ToString()));
+        Dispatcher.BeginInvoke(() => 
+        {
+            UpdateStatus(state.ToString());
+            
+            // Afficher l'overlay de reconnexion
+            if (state == SourceState.Reconnecting)
+            {
+                ReconnectingOverlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                ReconnectingOverlay.Visibility = Visibility.Collapsed;
+            }
+        });
     }
 
     private void OnCompositionTargetRendering(object? sender, EventArgs e)
@@ -686,6 +699,7 @@ public partial class VisionView : UserControl
         {
             "Running" => Brushes.LimeGreen,
             "Ready" => Brushes.Yellow,
+            "Reconnecting" => Brushes.Orange,
             "Error" => Brushes.Red,
             _ => Brushes.Gray
         };

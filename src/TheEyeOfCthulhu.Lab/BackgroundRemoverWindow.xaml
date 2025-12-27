@@ -1,0 +1,190 @@
+<Window x:Class="TheEyeOfCthulhu.Lab.BackgroundRemoverWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="🪄 Background Remover" 
+        Height="600" Width="900"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E">
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="220" />
+        </Grid.ColumnDefinitions>
+        
+        <!-- Image avec preview -->
+        <Grid Grid.Column="0" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            
+            <TextBlock Grid.Row="0" 
+                       Text="👆 Click on the BACKGROUND to remove it" 
+                       Foreground="#00CED1" 
+                       FontSize="14" 
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,10" />
+            
+            <Border Grid.Row="1" 
+                    BorderBrush="#3F3F3F" 
+                    BorderThickness="1" 
+                    CornerRadius="4"
+                    Background="#0A0A0A"
+                    ClipToBounds="True">
+                <ScrollViewer x:Name="ImageScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              PreviewMouseWheel="ImageScrollViewer_PreviewMouseWheel"
+                              PreviewMouseDown="ImageScrollViewer_PreviewMouseDown"
+                              PreviewMouseMove="ImageScrollViewer_PreviewMouseMove"
+                              PreviewMouseUp="ImageScrollViewer_PreviewMouseUp">
+                    <Grid x:Name="ImageContainer">
+                        <Grid.LayoutTransform>
+                            <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1" />
+                        </Grid.LayoutTransform>
+                        
+                        <Image x:Name="PreviewImage" 
+                               Stretch="None" 
+                               MouseLeftButtonDown="PreviewImage_MouseLeftButtonDown" 
+                               Cursor="Cross" />
+                        
+                        <!-- Overlay pour montrer le masque -->
+                        <Image x:Name="MaskOverlay" 
+                               Stretch="None" 
+                               Opacity="0.5" 
+                               IsHitTestVisible="False" />
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+            
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <TextBlock Text="Zoom: " Foreground="#888" VerticalAlignment="Center" />
+                <TextBlock x:Name="ZoomText" Text="100%" Foreground="#00CED1" VerticalAlignment="Center" Margin="0,0,15,0" />
+                <Button Content="-" Width="30" Click="ZoomOut_Click" Margin="0,0,5,0" />
+                <Button Content="Fit" Width="40" Click="ZoomFit_Click" Margin="0,0,5,0" />
+                <Button Content="100%" Width="45" Click="Zoom100_Click" Margin="0,0,5,0" />
+                <Button Content="+" Width="30" Click="ZoomIn_Click" />
+            </StackPanel>
+        </Grid>
+        
+        <!-- Panneau de contrôle -->
+        <Border Grid.Column="1" 
+                Margin="0,10,10,10" 
+                Background="#2D2D2D" 
+                BorderBrush="#3F3F3F" 
+                BorderThickness="1"
+                CornerRadius="4">
+            <StackPanel Margin="15">
+                
+                <TextBlock Text="METHOD" 
+                           Foreground="#888" 
+                           FontWeight="Bold" 
+                           Margin="0,0,0,10" />
+                
+                <RadioButton x:Name="FloodFillRadio" 
+                             Content="🪄 Magic Wand (click)" 
+                             Foreground="#CCC" 
+                             IsChecked="True"
+                             Margin="0,0,0,5"
+                             Checked="MethodRadio_Changed" />
+                
+                <RadioButton x:Name="AutoThresholdRadio" 
+                             Content="⚡ Auto (threshold)" 
+                             Foreground="#CCC"
+                             Margin="0,0,0,5"
+                             Checked="MethodRadio_Changed" />
+                
+                <RadioButton x:Name="GrabCutRadio" 
+                             Content="🎯 Smart (GrabCut)" 
+                             Foreground="#CCC"
+                             Margin="0,0,0,15"
+                             Checked="MethodRadio_Changed" />
+                
+                <Separator Background="#3F3F3F" Margin="0,0,0,15" />
+                
+                <!-- Flood Fill Settings -->
+                <StackPanel x:Name="FloodFillSettings">
+                    <TextBlock Text="TOLERANCE" 
+                               Foreground="#888" 
+                               FontWeight="Bold" 
+                               Margin="0,0,0,5" />
+                    
+                    <Slider x:Name="ToleranceSlider" 
+                            Minimum="1" Maximum="100" Value="32"
+                            TickFrequency="5" IsSnapToTickEnabled="True"
+                            ValueChanged="ToleranceSlider_ValueChanged" />
+                    
+                    <TextBlock x:Name="ToleranceText" 
+                               Text="32" 
+                               Foreground="#888" 
+                               HorizontalAlignment="Right" 
+                               Margin="0,0,0,10" />
+                    
+                    <CheckBox x:Name="InvertMaskCheckBox" 
+                              Content="Invert mask" 
+                              Foreground="#CCC"
+                              Margin="0,0,0,10"
+                              Checked="InvertMaskCheckBox_Changed"
+                              Unchecked="InvertMaskCheckBox_Changed" />
+                </StackPanel>
+                
+                <Separator Background="#3F3F3F" Margin="0,0,0,15" />
+                
+                <TextBlock Text="PREVIEW" 
+                           Foreground="#888" 
+                           FontWeight="Bold" 
+                           Margin="0,0,0,10" />
+                
+                <CheckBox x:Name="ShowMaskCheckBox" 
+                          Content="Show mask overlay" 
+                          Foreground="#CCC"
+                          IsChecked="True"
+                          Margin="0,0,0,5"
+                          Checked="ShowMaskCheckBox_Changed"
+                          Unchecked="ShowMaskCheckBox_Changed" />
+                
+                <CheckBox x:Name="ShowContourCheckBox" 
+                          Content="Show contour" 
+                          Foreground="#CCC"
+                          IsChecked="True"
+                          Margin="0,0,0,15"
+                          Checked="ShowContourCheckBox_Changed"
+                          Unchecked="ShowContourCheckBox_Changed" />
+                
+                <TextBlock x:Name="InfoText" 
+                           Text="Click on the background..." 
+                           Foreground="#666"
+                           TextWrapping="Wrap"
+                           FontSize="11"
+                           Margin="0,0,0,15" />
+                
+                <Separator Background="#3F3F3F" Margin="0,0,0,15" />
+                
+                <!-- Actions -->
+                <Button x:Name="ResetButton" 
+                        Content="🔄 Reset" 
+                        Padding="10,8"
+                        Margin="0,0,0,10"
+                        Click="ResetButton_Click" />
+                
+                <Button x:Name="LoadImageButton" 
+                        Content="📁 Load Image" 
+                        Padding="10,8"
+                        Margin="0,0,0,10"
+                        Click="LoadImageButton_Click" />
+                
+                <Button x:Name="ApplyButton" 
+                        Content="✅ Apply and Close" 
+                        Padding="10,8"
+                        Background="#0E7A0D"
+                        Foreground="White"
+                        IsEnabled="False"
+                        Click="ApplyButton_Click" />
+                
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

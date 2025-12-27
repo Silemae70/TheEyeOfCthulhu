@@ -19,6 +19,12 @@ public abstract class VideoCaptureSourceBase : IFrameSource
     private readonly Stopwatch _fpsStopwatch = new();
     private int _frameCountForFps;
     private double _actualFps;
+    
+    // Reconnexion automatique
+    private int _consecutiveFailures;
+    private const int MaxConsecutiveFailures = 30; // ~1 seconde de frames ratées
+    private const int ReconnectDelayMs = 2000;
+    private const int MaxReconnectAttempts = 10;
 
     #region IFrameSource Properties
 
@@ -200,52 +206,136 @@ public abstract class VideoCaptureSourceBase : IFrameSource
         Log("Capture loop started");
 
         using var mat = new Mat();
+        int reconnectAttempts = 0;
 
-        try
+        while (IsRunning)
         {
-            while (IsRunning)
+            var capture = Capture;
+            
+            // Vérifier si capture est valide
+            if (capture == null || !capture.IsOpened())
             {
-                var capture = Capture;
-                if (capture == null || !capture.IsOpened())
+                if (!TryReconnect(ref reconnectAttempts))
                 {
                     break;
                 }
+                continue;
+            }
 
-                try
+            try
+            {
+                if (!capture.Read(mat) || mat.Empty())
                 {
-                    if (!capture.Read(mat) || mat.Empty())
+                    _consecutiveFailures++;
+                    
+                    if (_consecutiveFailures >= MaxConsecutiveFailures)
                     {
-                        Thread.Sleep(1);
-                        continue;
-                    }
-
-                    var frame = MatToFrame(mat);
-                    if (frame != null)
-                    {
-                        TotalFramesCaptured++;
-                        UpdateFps();
-
-                        if (IsRunning)
+                        Log($"Too many consecutive failures ({_consecutiveFailures}), attempting reconnect...");
+                        
+                        if (!TryReconnect(ref reconnectAttempts))
                         {
-                            OnFrameReceived(frame);
+                            break;
                         }
+                        _consecutiveFailures = 0;
+                    }
+                    else
+                    {
+                        Thread.Sleep(10);
+                    }
+                    continue;
+                }
+
+                // Succès ! Reset les compteurs
+                _consecutiveFailures = 0;
+                reconnectAttempts = 0;
+
+                var frame = MatToFrame(mat);
+                if (frame != null)
+                {
+                    TotalFramesCaptured++;
+                    UpdateFps();
+
+                    if (IsRunning)
+                    {
+                        OnFrameReceived(frame);
                     }
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                Log($"Frame error: {ex.Message}");
+                _consecutiveFailures++;
+                
+                if (_consecutiveFailures >= MaxConsecutiveFailures)
                 {
-                    Log($"Frame error: {ex.Message}");
-                    if (IsRunning) break;
+                    if (!TryReconnect(ref reconnectAttempts))
+                    {
+                        break;
+                    }
+                    _consecutiveFailures = 0;
                 }
+            }
+        }
+
+        Log("Capture loop ended");
+    }
+
+    /// <summary>
+    /// Tente de se reconnecter à la source.
+    /// </summary>
+    private bool TryReconnect(ref int attempts)
+    {
+        if (!IsRunning) return false;
+        
+        attempts++;
+        
+        if (attempts > MaxReconnectAttempts)
+        {
+            Log($"Max reconnect attempts ({MaxReconnectAttempts}) reached, giving up.");
+            OnError(new Exception("Connection lost"), "Failed to reconnect after multiple attempts");
+            return false;
+        }
+
+        Log($"Reconnect attempt {attempts}/{MaxReconnectAttempts}...");
+        SetState(SourceState.Reconnecting);
+
+        // Libérer l'ancienne capture
+        var oldCapture = Capture;
+        Capture = null;
+        if (oldCapture != null)
+        {
+            try
+            {
+                oldCapture.Release();
+                oldCapture.Dispose();
+            }
+            catch { /* ignore */ }
+        }
+
+        // Attendre avant de retenter
+        Thread.Sleep(ReconnectDelayMs);
+
+        if (!IsRunning) return false;
+
+        // Tenter de recréer la capture
+        try
+        {
+            Capture = CreateCapture();
+            
+            if (Capture != null && Capture.IsOpened())
+            {
+                Log($"Reconnected successfully!");
+                SetState(SourceState.Running);
+                return true;
             }
         }
         catch (Exception ex)
         {
-            Log($"FATAL error in loop: {ex.Message}");
+            Log($"Reconnect failed: {ex.Message}");
         }
-        finally
-        {
-            Log("Capture loop ended");
-        }
+
+        // Échec, on réessaiera
+        return TryReconnect(ref attempts);
     }
 
     #endregion

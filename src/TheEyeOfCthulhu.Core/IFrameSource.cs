@@ -20,6 +20,9 @@ public enum SourceState
     /// <summary>Source arrêtée.</summary>
     Stopped,
     
+    /// <summary>Tentative de reconnexion en cours.</summary>
+    Reconnecting,
+    
     /// <summary>Erreur.</summary>
     Error
 }

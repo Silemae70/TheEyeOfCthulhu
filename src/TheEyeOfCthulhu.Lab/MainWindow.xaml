@@ -3,14 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:eye="clr-namespace:TheEyeOfCthulhu.WPF.Controls;assembly=TheEyeOfCthulhu.WPF"
         Title="👁️ The Eye of Cthulhu - Lab" 
-        Height="720" Width="1100"
+        Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
         Background="#1E1E1E">
     
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="280" />
+            <ColumnDefinition Width="300" />
         </Grid.ColumnDefinitions>
         
         <!-- Zone vidéo principale -->
@@ -35,267 +35,398 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="15">
                     
-                    <!-- Source Selection -->
-                    <TextBlock Text="VIDEO SOURCE" 
-                               Foreground="#888" 
-                               FontWeight="Bold" 
-                               Margin="0,0,0,10" />
-                    
-                    <ComboBox x:Name="SourceComboBox" 
-                              SelectionChanged="SourceComboBox_SelectionChanged"
-                              Margin="0,0,0,10">
-                        <ComboBoxItem Content="DroidCam" IsSelected="True" />
-                        <ComboBoxItem Content="Webcam" />
-                    </ComboBox>
-                    
-                    <!-- DroidCam Settings -->
-                    <StackPanel x:Name="DroidCamPanel">
-                        <TextBlock Text="IP Address" Foreground="#CCC" Margin="0,0,0,4" />
-                        <TextBox x:Name="IpTextBox" Text="192.168.1.57" Margin="0,0,0,10" />
-                        
-                        <TextBlock Text="Port" Foreground="#CCC" Margin="0,0,0,4" />
-                        <TextBox x:Name="PortTextBox" Text="4747" Margin="0,0,0,10" />
-                    </StackPanel>
-                    
-                    <!-- Webcam Settings -->
-                    <StackPanel x:Name="WebcamPanel" Visibility="Collapsed">
-                        <TextBlock Text="Device Index" Foreground="#CCC" Margin="0,0,0,4" />
-                        <TextBox x:Name="WebcamIndexTextBox" Text="0" Margin="0,0,0,10" />
-                    </StackPanel>
-                    
-                    <!-- Controls -->
-                    <Grid Margin="0,10,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        
-                        <Button x:Name="StartButton" 
-                                Content="▶ Start" 
-                                Grid.Column="0" 
-                                Margin="0,0,5,0"
-                                Padding="10,8"
-                                Click="StartButton_Click"
-                                Background="#0E7A0D"
-                                Foreground="White" />
-                        
-                        <Button x:Name="StopButton" 
-                                Content="⬛ Stop" 
-                                Grid.Column="1" 
-                                Margin="5,0,0,0"
-                                Padding="10,8"
-                                Click="StopButton_Click"
-                                IsEnabled="False"
-                                Background="#C42B1C"
-                                Foreground="White" />
-                    </Grid>
-                    
-                    <Button x:Name="SnapshotButton" 
-                            Content="📸 Snapshot" 
-                            Margin="0,0,0,10"
-                            Padding="10,8"
-                            Click="SnapshotButton_Click"
-                            IsEnabled="False" />
-                    
-                    <Separator Margin="0,10" Background="#3F3F3F" />
-                    
-                    <!-- 🔯 ELDER SIGN -->
-                    <TextBlock Text="🔯 ELDER SIGN" 
-                               Foreground="#C586C0" 
-                               FontWeight="Bold" 
-                               Margin="0,0,0,10" />
-                    
-                    <CheckBox x:Name="RoiModeCheckBox" 
-                              Content="✂️ Select ROI (draw rectangle)" 
-                              Foreground="#00CED1"
-                              Margin="0,0,0,10"
-                              Checked="RoiModeCheckBox_Changed"
-                              Unchecked="RoiModeCheckBox_Changed"
-                              IsEnabled="False" />
-                    
-                    <Button x:Name="CaptureElderSignButton" 
-                            Content="📷 Capture ElderSign" 
-                            Margin="0,0,0,5"
-                            Padding="10,8"
-                            Click="CaptureElderSignButton_Click"
-                            IsEnabled="False"
-                            Background="#6A0DAD"
-                            Foreground="White" />
-                    
-                    <TextBlock x:Name="RoiInfoText" 
-                               Text="💡 Enable ROI mode to select a region" 
-                               Foreground="#666"
-                               FontSize="10"
-                               Margin="0,0,0,10" />
-                    
-                    <Button x:Name="ClearElderSignButton" 
-                            Content="🗑️ Clear ElderSign" 
-                            Margin="0,0,0,5"
-                            Padding="10,8"
-                            Click="ClearElderSignButton_Click"
-                            IsEnabled="False" />
-                    
-                    <!-- Save/Load ElderSign -->
-                    <Grid Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        
-                        <Button x:Name="SaveElderSignButton" 
-                                Content="💾 Save" 
-                                Grid.Column="0" 
-                                Margin="0,0,3,0"
-                                Padding="8,6"
-                                Click="SaveElderSignButton_Click"
-                                IsEnabled="False"
-                                FontSize="11" />
-                        
-                        <Button x:Name="LoadElderSignButton" 
-                                Content="📂 Load" 
-                                Grid.Column="1" 
-                                Margin="3,0,0,0"
-                                Padding="8,6"
-                                Click="LoadElderSignButton_Click"
-                                FontSize="11" />
-                    </Grid>
-                    
-                    <CheckBox x:Name="EnableElderSignCheckBox" 
-                              Content="Enable Detection" 
-                              Foreground="#C586C0"
-                              Margin="0,0,0,5"
-                              IsEnabled="False"
-                              Checked="EnableElderSignCheckBox_Changed"
-                              Unchecked="EnableElderSignCheckBox_Changed" />
-                    
-                    <!-- Matcher Type -->
-                    <StackPanel Margin="10,5,0,0">
-                        <TextBlock Text="Matcher:" Foreground="#999" FontSize="11" />
-                        <ComboBox x:Name="MatcherTypeComboBox" 
-                                  Margin="0,3,0,0"
-                                  SelectionChanged="MatcherTypeComboBox_SelectionChanged">
-                            <ComboBoxItem Content="Template (fast, no rotation)" IsSelected="True" />
-                            <ComboBoxItem Content="ORB Features (rotation+scale)" />
-                            <ComboBoxItem Content="AKAZE Features (robust)" />
-                        </ComboBox>
-                    </StackPanel>
-                    
-                    <StackPanel Margin="10,5,0,0">
-                        <TextBlock Text="Min Score:" Foreground="#999" FontSize="11" />
-                        <Slider x:Name="MinScoreSlider" 
-                                Minimum="0.5" Maximum="0.99" Value="0.7" 
-                                TickFrequency="0.05" IsSnapToTickEnabled="True"
-                                ValueChanged="MinScoreSlider_ValueChanged" />
-                        <TextBlock x:Name="MinScoreText" Text="70%" Foreground="#999" FontSize="11" HorizontalAlignment="Right" Margin="0,-5,0,0" />
-                    </StackPanel>
-                    
-                    <Border x:Name="ElderSignPreview" 
-                            Background="#1A1A1A" 
-                            BorderBrush="#3F3F3F" 
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Height="80"
-                            Margin="0,10,0,0"
-                            Visibility="Collapsed">
-                        <Grid>
-                            <Image x:Name="ElderSignImage" Stretch="Uniform" Margin="5" />
-                            <TextBlock x:Name="ElderSignSizeText" 
-                                       Text="" 
-                                       Foreground="#888" 
-                                       FontSize="10"
-                                       VerticalAlignment="Bottom"
-                                       HorizontalAlignment="Right"
-                                       Margin="5" />
-                        </Grid>
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- ÉTAPE 1 : CONNEXION CAMÉRA -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <Border Background="#252526" CornerRadius="4" Padding="10" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="① CONNEXION CAMÉRA" 
+                                       Foreground="#4EC9B0" 
+                                       FontWeight="Bold" 
+                                       FontSize="12"
+                                       Margin="0,0,0,10" />
+                            
+                            <ComboBox x:Name="SourceComboBox" 
+                                      SelectionChanged="SourceComboBox_SelectionChanged"
+                                      Margin="0,0,0,8">
+                                <ComboBoxItem Content="DroidCam (WiFi)" IsSelected="True" />
+                                <ComboBoxItem Content="Webcam (USB)" />
+                            </ComboBox>
+                            
+                            <!-- DroidCam Settings -->
+                            <StackPanel x:Name="DroidCamPanel">
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="50" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="IP:" Foreground="#888" VerticalAlignment="Center" />
+                                    <TextBox x:Name="IpTextBox" Text="192.168.1.57" Grid.Column="1" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="50" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Port:" Foreground="#888" VerticalAlignment="Center" />
+                                    <TextBox x:Name="PortTextBox" Text="4747" Grid.Column="1" />
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Webcam Settings -->
+                            <StackPanel x:Name="WebcamPanel" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="50" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Index:" Foreground="#888" VerticalAlignment="Center" />
+                                    <TextBox x:Name="WebcamIndexTextBox" Text="0" Grid.Column="1" />
+                                </Grid>
+                            </StackPanel>
+                            
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                
+                                <Button x:Name="StartButton" 
+                                        Content="▶ Démarrer" 
+                                        Grid.Column="0" 
+                                        Margin="0,0,4,0"
+                                        Padding="8,6"
+                                        Click="StartButton_Click"
+                                        Background="#0E7A0D"
+                                        Foreground="White" />
+                                
+                                <Button x:Name="StopButton" 
+                                        Content="⬛ Stop" 
+                                        Grid.Column="1" 
+                                        Margin="4,0,0,0"
+                                        Padding="8,6"
+                                        Click="StopButton_Click"
+                                        IsEnabled="False"
+                                        Background="#C42B1C"
+                                        Foreground="White" />
+                            </Grid>
+                        </StackPanel>
                     </Border>
                     
-                    <TextBlock x:Name="ElderSignResultText" 
-                               Text="" 
-                               Foreground="#C586C0"
-                               TextWrapping="Wrap"
-                               FontSize="11"
-                               Margin="0,10,0,0" />
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- ÉTAPE 2 : CRÉER UN MODÈLE (ELDERSIGN) -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <Border Background="#252526" CornerRadius="4" Padding="10" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="② CRÉER UN MODÈLE" 
+                                       Foreground="#C586C0" 
+                                       FontWeight="Bold" 
+                                       FontSize="12"
+                                       Margin="0,0,0,8" />
+                            
+                            <TextBlock Text="Choisissez une méthode :" 
+                                       Foreground="#888" 
+                                       FontSize="10"
+                                       Margin="0,0,0,8" />
+                            
+                            <!-- Option A: Depuis fichier image -->
+                            <Button x:Name="LoadImageForRemovalButton" 
+                                    Content="📁 Charger une image..." 
+                                    Padding="10,8"
+                                    Margin="0,0,0,5"
+                                    Click="LoadImageForRemovalButton_Click"
+                                    ToolTip="Charger un fichier image et définir le contour" />
+                            
+                            <!-- Option B: Depuis caméra -->
+                            <TextBlock Text="— ou depuis la caméra —" 
+                                       Foreground="#555" 
+                                       FontSize="10"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,5" />
+                            
+                            <CheckBox x:Name="RoiModeCheckBox" 
+                                      Content="✂️ Sélectionner une zone (ROI)" 
+                                      Foreground="#00CED1"
+                                      Margin="0,5,0,5"
+                                      Checked="RoiModeCheckBox_Changed"
+                                      Unchecked="RoiModeCheckBox_Changed"
+                                      IsEnabled="False" />
+                            
+                            <Button x:Name="CaptureElderSignButton" 
+                                    Content="📷 Capturer depuis caméra" 
+                                    Padding="10,8"
+                                    Margin="0,0,0,5"
+                                    Click="CaptureElderSignButton_Click"
+                                    IsEnabled="False"
+                                    Background="#6A0DAD"
+                                    Foreground="White" />
+                            
+                            <TextBlock x:Name="RoiInfoText" 
+                                       Text="" 
+                                       Foreground="#666"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       Margin="0,5,0,0" />
+                            
+                            <!-- Preview du modèle -->
+                            <Border x:Name="ElderSignPreview" 
+                                    Background="#1A1A1A" 
+                                    BorderBrush="#3F3F3F" 
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Height="70"
+                                    Margin="0,10,0,0"
+                                    Visibility="Collapsed">
+                                <Grid>
+                                    <Image x:Name="ElderSignImage" Stretch="Uniform" Margin="5" />
+                                    <TextBlock x:Name="ElderSignSizeText" 
+                                               Text="" 
+                                               Foreground="#888" 
+                                               FontSize="9"
+                                               VerticalAlignment="Bottom"
+                                               HorizontalAlignment="Right"
+                                               Margin="5" />
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Actions sur modèle capturé -->
+                            <StackPanel x:Name="ModelActionsPanel" Margin="0,8,0,0">
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <Button x:Name="BackgroundRemoverButton" 
+                                            Content="🪄 Définir contour" 
+                                            Grid.Column="0"
+                                            Margin="0,0,3,0"
+                                            Padding="6,5"
+                                            Click="BackgroundRemoverButton_Click"
+                                            IsEnabled="False"
+                                            FontSize="11" />
+                                    
+                                    <Button x:Name="AutoContourButton" 
+                                            Content="✨ Auto" 
+                                            Grid.Column="1" 
+                                            Margin="3,0,0,0"
+                                            Padding="6,5"
+                                            Click="AutoContourButton_Click"
+                                            IsEnabled="False"
+                                            FontSize="11"
+                                            ToolTip="Extraction automatique du contour" />
+                                </Grid>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <Button x:Name="SaveElderSignButton" 
+                                            Content="💾" 
+                                            Grid.Column="0"
+                                            Margin="0,0,3,0"
+                                            Padding="6,5"
+                                            Click="SaveElderSignButton_Click"
+                                            IsEnabled="False"
+                                            ToolTip="Sauvegarder le modèle" />
+                                    
+                                    <Button x:Name="LoadElderSignButton" 
+                                            Content="📂" 
+                                            Grid.Column="1"
+                                            Margin="3,0,3,0"
+                                            Padding="6,5"
+                                            Click="LoadElderSignButton_Click"
+                                            ToolTip="Charger un modèle sauvegardé" />
+                                    
+                                    <Button x:Name="ClearElderSignButton" 
+                                            Content="🗑️" 
+                                            Grid.Column="2"
+                                            Margin="3,0,0,0"
+                                            Padding="6,5"
+                                            Click="ClearElderSignButton_Click"
+                                            IsEnabled="False"
+                                            ToolTip="Effacer le modèle" />
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Bouton import PNG caché (pour compatibilité) -->
+                            <Button x:Name="ImportPngButton" 
+                                    Visibility="Collapsed"
+                                    Click="ImportPngButton_Click" />
+                            
+                            <TextBlock x:Name="ElderSignResultText" 
+                                       Text="" 
+                                       Foreground="#C586C0"
+                                       TextWrapping="Wrap"
+                                       FontSize="11"
+                                       Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
                     
-                    <Separator Margin="0,15" Background="#3F3F3F" />
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- ÉTAPE 3 : LANCER LA DÉTECTION -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <Border Background="#252526" CornerRadius="4" Padding="10" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="③ LANCER LA DÉTECTION" 
+                                       Foreground="#DCDCAA" 
+                                       FontWeight="Bold" 
+                                       FontSize="12"
+                                       Margin="0,0,0,10" />
+                            
+                            <CheckBox x:Name="EnableElderSignCheckBox" 
+                                      Content="🔍 Activer la détection" 
+                                      Foreground="#DCDCAA"
+                                      FontWeight="SemiBold"
+                                      Margin="0,0,0,10"
+                                      IsEnabled="False"
+                                      Checked="EnableElderSignCheckBox_Changed"
+                                      Unchecked="EnableElderSignCheckBox_Changed" />
+                            
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Méthode:" Foreground="#888" FontSize="11" VerticalAlignment="Center" />
+                                <ComboBox x:Name="MatcherTypeComboBox" 
+                                          Grid.Column="1"
+                                          FontSize="11"
+                                          SelectionChanged="MatcherTypeComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="Template (rapide)" IsSelected="True" />
+                                    <ComboBoxItem Content="ORB (rotation)" />
+                                    <ComboBoxItem Content="AKAZE (robuste)" />
+                                </ComboBox>
+                            </Grid>
+                            
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="35" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Score min:" Foreground="#888" FontSize="11" VerticalAlignment="Center" />
+                                <Slider x:Name="MinScoreSlider" 
+                                        Grid.Column="1"
+                                        Minimum="0.5" Maximum="0.99" Value="0.7" 
+                                        TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                        ValueChanged="MinScoreSlider_ValueChanged" />
+                                <TextBlock x:Name="MinScoreText" Text="70%" Grid.Column="2" 
+                                           Foreground="#888" FontSize="11" VerticalAlignment="Center" />
+                            </Grid>
+                            
+                            <CheckBox x:Name="ShowTemplateOverlayCheckBox" 
+                                      Content="👻 Afficher overlay" 
+                                      Foreground="#888"
+                                      FontSize="11"
+                                      Margin="0,5,0,0"
+                                      IsEnabled="False"
+                                      Checked="ShowTemplateOverlayCheckBox_Changed"
+                                      Unchecked="ShowTemplateOverlayCheckBox_Changed" />
+                        </StackPanel>
+                    </Border>
                     
-                    <!-- Processing Pipeline -->
-                    <TextBlock Text="PROCESSING PIPELINE" 
-                               Foreground="#888" 
-                               FontWeight="Bold" 
-                               Margin="0,0,0,10" />
-                    
-                    <CheckBox x:Name="EnablePipelineCheckBox" 
-                              Content="Enable Processing" 
-                              Foreground="#CCC"
-                              Margin="0,0,0,10"
-                              Checked="EnablePipelineCheckBox_Changed"
-                              Unchecked="EnablePipelineCheckBox_Changed" />
-                    
-                    <StackPanel x:Name="ProcessorsPanel" Margin="10,0,0,0">
-                        <CheckBox x:Name="GrayscaleCheckBox" Content="Grayscale" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
-                        <CheckBox x:Name="BlurCheckBox" Content="Gaussian Blur" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
-                        <CheckBox x:Name="ThresholdCheckBox" Content="Threshold (Otsu)" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
-                        <CheckBox x:Name="CannyCheckBox" Content="Canny Edge" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
-                        <CheckBox x:Name="ContoursCheckBox" Content="Contour Detection" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
-                        <CheckBox x:Name="HoughCirclesCheckBox" Content="🔵 Hough Circles" Foreground="#4FC3F7" IsChecked="False" Margin="0,4" Click="ProcessorCheckBox_Click" />
-                    </StackPanel>
-                    
-                    <!-- Hough Circles Settings -->
-                    <StackPanel x:Name="HoughCirclesSettings" Margin="10,10,0,0" Visibility="Collapsed">
-                        <TextBlock Text="Min Radius:" Foreground="#4FC3F7" FontSize="10" />
-                        <Grid>
-                            <Slider x:Name="HoughMinRadiusSlider" Minimum="0" Maximum="200" Value="20" 
-                                    TickFrequency="10" IsSnapToTickEnabled="True" 
-                                    PreviewMouseUp="HoughSlider_MouseUp" 
-                                    LostMouseCapture="HoughSlider_LostCapture" />
-                            <TextBlock x:Name="HoughMinRadiusText" Text="20" Foreground="#888" FontSize="9" 
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
-                        </Grid>
-                        
-                        <TextBlock Text="Max Radius:" Foreground="#4FC3F7" FontSize="10" Margin="0,5,0,0" />
-                        <Grid>
-                            <Slider x:Name="HoughMaxRadiusSlider" Minimum="0" Maximum="500" Value="200" 
-                                    TickFrequency="10" IsSnapToTickEnabled="True" 
-                                    PreviewMouseUp="HoughSlider_MouseUp" 
-                                    LostMouseCapture="HoughSlider_LostCapture" />
-                            <TextBlock x:Name="HoughMaxRadiusText" Text="200" Foreground="#888" FontSize="9" 
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
-                        </Grid>
-                        
-                        <TextBlock Text="Sensitivity (lower=more):" Foreground="#4FC3F7" FontSize="10" Margin="0,5,0,0" />
-                        <Grid>
-                            <Slider x:Name="HoughSensitivitySlider" Minimum="10" Maximum="150" Value="50" 
-                                    TickFrequency="5" IsSnapToTickEnabled="True" 
-                                    PreviewMouseUp="HoughSlider_MouseUp" 
-                                    LostMouseCapture="HoughSlider_LostCapture" />
-                            <TextBlock x:Name="HoughSensitivityText" Text="50" Foreground="#888" FontSize="9" 
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
-                        </Grid>
-                        
-                        <TextBlock x:Name="HoughResultText" Text="" Foreground="#4FC3F7" FontSize="11" 
-                                   Margin="0,8,0,0" TextWrapping="Wrap" FontWeight="SemiBold" />
-                    </StackPanel>
+                    <!-- ═══════════════════════════════════════════ -->
+                    <!-- OUTILS AVANCÉS (collapsed par défaut) -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <Expander Header="⚙️ Outils avancés" Foreground="#888" IsExpanded="False">
+                        <StackPanel Margin="5,10,0,0">
+                            
+                            <Button x:Name="SnapshotButton" 
+                                    Content="📸 Snapshot" 
+                                    Margin="0,0,0,10"
+                                    Padding="8,6"
+                                    Click="SnapshotButton_Click"
+                                    IsEnabled="False" />
+                            
+                            <!-- Processing Pipeline -->
+                            <CheckBox x:Name="EnablePipelineCheckBox" 
+                                      Content="Pipeline de traitement" 
+                                      Foreground="#888"
+                                      Margin="0,0,0,8"
+                                      Checked="EnablePipelineCheckBox_Changed"
+                                      Unchecked="EnablePipelineCheckBox_Changed" />
+                            
+                            <StackPanel x:Name="ProcessorsPanel" Margin="15,0,0,0">
+                                <CheckBox x:Name="GrayscaleCheckBox" Content="Grayscale" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="BlurCheckBox" Content="Blur" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="ThresholdCheckBox" Content="Threshold" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="CannyCheckBox" Content="Canny" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="ContoursCheckBox" Content="Contours" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="HoughCirclesCheckBox" Content="🔵 Cercles" Foreground="#4FC3F7" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                            </StackPanel>
+                            
+                            <!-- Hough Circles Settings -->
+                            <StackPanel x:Name="HoughCirclesSettings" Margin="15,10,0,0" Visibility="Collapsed">
+                                <TextBlock Text="Min/Max Radius:" Foreground="#4FC3F7" FontSize="10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="HoughMinRadiusSlider" Minimum="0" Maximum="200" Value="20" 
+                                            PreviewMouseUp="HoughSlider_MouseUp" LostMouseCapture="HoughSlider_LostCapture" />
+                                    <Slider x:Name="HoughMaxRadiusSlider" Grid.Column="1" Minimum="0" Maximum="500" Value="200" 
+                                            PreviewMouseUp="HoughSlider_MouseUp" LostMouseCapture="HoughSlider_LostCapture" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="HoughMinRadiusText" Text="20" Foreground="#888" FontSize="9" />
+                                    <TextBlock x:Name="HoughMaxRadiusText" Text="200" Foreground="#888" FontSize="9" Grid.Column="1" />
+                                </Grid>
+                                
+                                <TextBlock Text="Sensibilité:" Foreground="#4FC3F7" FontSize="10" Margin="0,5,0,0" />
+                                <Slider x:Name="HoughSensitivitySlider" Minimum="10" Maximum="150" Value="50" 
+                                        PreviewMouseUp="HoughSlider_MouseUp" LostMouseCapture="HoughSlider_LostCapture" />
+                                <TextBlock x:Name="HoughSensitivityText" Text="50" Foreground="#888" FontSize="9" />
+                                
+                                <TextBlock x:Name="HoughResultText" Text="" Foreground="#4FC3F7" FontSize="10" 
+                                           Margin="0,8,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
                     
                     <Separator Margin="0,15" Background="#3F3F3F" />
                     
                     <!-- Info -->
-                    <TextBlock Text="INFO" 
-                               Foreground="#888" 
-                               FontWeight="Bold" 
-                               Margin="0,0,0,10" />
-                    
                     <TextBlock x:Name="ClickInfoText" 
-                               Text="Click on image to get coordinates" 
+                               Text="" 
                                Foreground="#666"
                                TextWrapping="Wrap"
-                               FontSize="11" />
+                               FontSize="10" />
                     
                     <TextBlock x:Name="ProcessingInfoText" 
                                Text="" 
                                Foreground="#0A0"
                                TextWrapping="Wrap"
-                               FontSize="11"
-                               Margin="0,10,0,0" />
+                               FontSize="10"
+                               Margin="0,5,0,0" />
+                    
+                    <!-- Aide et version -->
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Text="v1.0.0" 
+                                   Foreground="#444" 
+                                   FontSize="10" 
+                                   VerticalAlignment="Center" />
+                        
+                        <Button x:Name="HelpButton" 
+                                Content="❓ Aide" 
+                                Grid.Column="1"
+                                Padding="12,6"
+                                Click="HelpButton_Click"
+                                ToolTip="Afficher le guide de démarrage" />
+                    </Grid>
                     
                 </StackPanel>
             </ScrollViewer>

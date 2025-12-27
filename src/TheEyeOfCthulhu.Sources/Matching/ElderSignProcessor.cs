@@ -59,6 +59,16 @@ public class ElderSignProcessor : FrameProcessorBase
     /// </summary>
     public bool ShowLabel { get; set; } = true;
 
+    /// <summary>
+    /// Dessiner le template transformé (overlay semi-transparent) sur la détection.
+    /// </summary>
+    public bool DrawTemplateOverlay { get; set; } = false;
+
+    /// <summary>
+    /// Opacité de l'overlay du template (0.0 - 1.0).
+    /// </summary>
+    public double TemplateOverlayOpacity { get; set; } = 0.5;
+
     public ElderSignProcessor(IElderSignMatcher? matcher = null)
     {
         _matcher = matcher ?? new TemplateSignMatcher();
@@ -218,13 +228,35 @@ public class ElderSignProcessor : FrameProcessorBase
         if (result.Found && result.BestMatch != null)
         {
             var match = result.BestMatch;
-            var bbox = match.BoundingBox;
+            var elderSign = match.ElderSign;
 
-            // Rectangle autour du match
-            Cv2.Rectangle(mat,
-                new OpenCvSharp.Point(bbox.X, bbox.Y),
-                new OpenCvSharp.Point(bbox.Right, bbox.Bottom),
-                MatchColor, LineThickness);
+            // Dessiner l'overlay du template si activé
+            if (DrawTemplateOverlay && match.TransformedCorners != null && match.TransformedCorners.Length == 4)
+            {
+                DrawTransformedTemplate(mat, match);
+            }
+
+            // Dessiner le contour/forme
+            if (elderSign.ContourPoints != null && elderSign.ContourPoints.Length >= 3 
+                && match.TransformedCorners != null && match.TransformedCorners.Length == 4)
+            {
+                // On a un vrai contour ET une transformation -> dessiner le contour transformé
+                DrawTransformedContour(mat, elderSign.ContourPoints, match.TransformedCorners, elderSign.Width, elderSign.Height, MatchColor);
+            }
+            else if (match.TransformedCorners != null && match.TransformedCorners.Length == 4)
+            {
+                // Pas de contour mais on a les coins transformés -> dessiner le quadrilatère
+                DrawQuadrilateral(mat, match.TransformedCorners, MatchColor);
+            }
+            else
+            {
+                // Sinon, dessiner le rectangle axis-aligned
+                var bbox = match.BoundingBox;
+                Cv2.Rectangle(mat,
+                    new OpenCvSharp.Point(bbox.X, bbox.Y),
+                    new OpenCvSharp.Point(bbox.Right, bbox.Bottom),
+                    MatchColor, LineThickness);
+            }
 
             // Point d'ancrage
             var anchor = match.AnchorPosition;
@@ -244,17 +276,25 @@ public class ElderSignProcessor : FrameProcessorBase
             // Label
             if (ShowLabel)
             {
+                var bbox = match.BoundingBox;
                 var label = $"{name}: {match.Score:P0}";
+                
+                // Ajouter angle/scale si significatifs
+                if (Math.Abs(match.Angle) > 1 || Math.Abs(match.Scale - 1.0) > 0.05)
+                {
+                    label += $" ({match.Angle:F0}°, x{match.Scale:F2})";
+                }
+                
                 var labelPos = new OpenCvSharp.Point(bbox.X, bbox.Y - 10);
                 
                 // Fond noir pour lisibilité
-                var textSize = Cv2.GetTextSize(label, HersheyFonts.HersheySimplex, 0.6, 1, out _);
+                var textSize = Cv2.GetTextSize(label, HersheyFonts.HersheySimplex, 0.5, 1, out _);
                 Cv2.Rectangle(mat,
                     new OpenCvSharp.Point(labelPos.X - 2, labelPos.Y - textSize.Height - 2),
                     new OpenCvSharp.Point(labelPos.X + textSize.Width + 2, labelPos.Y + 4),
                     Scalar.Black, -1);
                 
-                Cv2.PutText(mat, label, labelPos, HersheyFonts.HersheySimplex, 0.6, MatchColor, 2);
+                Cv2.PutText(mat, label, labelPos, HersheyFonts.HersheySimplex, 0.5, MatchColor, 1);
             }
         }
         else if (ShowLabel)
@@ -265,6 +305,160 @@ public class ElderSignProcessor : FrameProcessorBase
             var yOffset = 30 + (signIndex * 25);
             Cv2.PutText(mat, label, new OpenCvSharp.Point(10, yOffset), 
                 HersheyFonts.HersheySimplex, 0.6, NotFoundColor, 2);
+        }
+    }
+
+    /// <summary>
+    /// Dessine le contour de l'objet transformé selon la détection.
+    /// </summary>
+    private void DrawTransformedContour(Mat mat, Core.Matching.PointF[] contourPoints, 
+        Core.Matching.PointF[] transformedCorners, int templateWidth, int templateHeight, Scalar color)
+    {
+        try
+        {
+            // Calculer la matrice de transformation à partir des coins
+            var srcCorners = new Point2f[]
+            {
+                new(0, 0),
+                new(templateWidth, 0),
+                new(templateWidth, templateHeight),
+                new(0, templateHeight)
+            };
+
+            var dstCorners = new Point2f[]
+            {
+                new((float)transformedCorners[0].X, (float)transformedCorners[0].Y),
+                new((float)transformedCorners[1].X, (float)transformedCorners[1].Y),
+                new((float)transformedCorners[2].X, (float)transformedCorners[2].Y),
+                new((float)transformedCorners[3].X, (float)transformedCorners[3].Y)
+            };
+
+            using var perspectiveMatrix = Cv2.GetPerspectiveTransform(srcCorners, dstCorners);
+
+            // Transformer chaque point du contour
+            var srcPoints = contourPoints.Select(p => new Point2f((float)p.X, (float)p.Y)).ToArray();
+            var transformedPoints = Cv2.PerspectiveTransform(srcPoints, perspectiveMatrix);
+
+            // Dessiner le contour transformé
+            var cvPoints = transformedPoints.Select(p => new OpenCvSharp.Point((int)p.X, (int)p.Y)).ToArray();
+            
+            // Dessiner le polygone fermé
+            Cv2.Polylines(mat, new[] { cvPoints }, isClosed: true, color, LineThickness);
+
+            // Optionnel: dessiner les points du contour
+            foreach (var p in cvPoints)
+            {
+                Cv2.Circle(mat, p, 3, color, -1);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ElderSign] DrawTransformedContour error: {ex.Message}");
+            // Fallback au quadrilatère
+            DrawQuadrilateral(mat, transformedCorners, color);
+        }
+    }
+
+    private void DrawTransformedTemplate(Mat mat, ElderSignMatch match)
+    {
+        try
+        {
+            var corners = match.TransformedCorners!;
+            
+            // Charger le template en Mat
+            using var templateMat = FrameMatConverter.ToMat(match.ElderSign.Template);
+            
+            // S'assurer que le template est en couleur (même format que mat)
+            using var templateColor = templateMat.Channels() == 1
+                ? templateMat.CvtColor(ColorConversionCodes.GRAY2BGR)
+                : templateMat.Clone();
+
+            // Coins source (template original)
+            var srcCorners = new Point2f[]
+            {
+                new(0, 0),
+                new(templateMat.Width, 0),
+                new(templateMat.Width, templateMat.Height),
+                new(0, templateMat.Height)
+            };
+
+            // Coins destination (position détectée)
+            var dstCorners = new Point2f[]
+            {
+                new((float)corners[0].X, (float)corners[0].Y),
+                new((float)corners[1].X, (float)corners[1].Y),
+                new((float)corners[2].X, (float)corners[2].Y),
+                new((float)corners[3].X, (float)corners[3].Y)
+            };
+
+            // Calculer la transformation perspective
+            using var perspectiveMatrix = Cv2.GetPerspectiveTransform(srcCorners, dstCorners);
+
+            // Appliquer la transformation au template
+            using var warpedTemplate = new Mat();
+            Cv2.WarpPerspective(templateColor, warpedTemplate, perspectiveMatrix, mat.Size());
+
+            // Créer un masque pour le template transformé
+            using var mask = new Mat(templateMat.Size(), MatType.CV_8UC1, Scalar.White);
+            using var warpedMask = new Mat();
+            Cv2.WarpPerspective(mask, warpedMask, perspectiveMatrix, mat.Size());
+
+            // Convertir le masque en 3 canaux
+            using var warpedMask3Ch = new Mat();
+            Cv2.CvtColor(warpedMask, warpedMask3Ch, ColorConversionCodes.GRAY2BGR);
+            
+            // Normaliser le masque (0-1)
+            using var maskFloat = new Mat();
+            warpedMask3Ch.ConvertTo(maskFloat, MatType.CV_32FC3, 1.0 / 255.0);
+
+            // Convertir les images en float
+            using var matFloat = new Mat();
+            using var warpedFloat = new Mat();
+            mat.ConvertTo(matFloat, MatType.CV_32FC3);
+            warpedTemplate.ConvertTo(warpedFloat, MatType.CV_32FC3);
+
+            // Blend: result = mat * (1 - mask*alpha) + warped * (mask*alpha)
+            var alpha = TemplateOverlayOpacity;
+            using var alphaScaled = maskFloat * alpha;
+            using var oneMinusAlpha = new Mat();
+            Cv2.Subtract(Scalar.All(1.0), alphaScaled, oneMinusAlpha);
+            
+            using var part1 = new Mat();
+            using var part2 = new Mat();
+            Cv2.Multiply(matFloat, oneMinusAlpha, part1);
+            Cv2.Multiply(warpedFloat, alphaScaled, part2);
+            
+            using var blended = new Mat();
+            Cv2.Add(part1, part2, blended);
+            
+            // Reconvertir en 8-bit
+            blended.ConvertTo(mat, MatType.CV_8UC3);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ElderSign] Overlay error: {ex.Message}");
+        }
+    }
+
+    private void DrawQuadrilateral(Mat mat, Core.Matching.PointF[] corners, Scalar color)
+    {
+        // Dessiner les 4 côtés du quadrilatère
+        for (int i = 0; i < 4; i++)
+        {
+            var p1 = corners[i];
+            var p2 = corners[(i + 1) % 4];
+            
+            Cv2.Line(mat,
+                new OpenCvSharp.Point((int)p1.X, (int)p1.Y),
+                new OpenCvSharp.Point((int)p2.X, (int)p2.Y),
+                color, LineThickness);
+        }
+
+        // Dessiner les coins avec des cercles
+        for (int i = 0; i < 4; i++)
+        {
+            var p = corners[i];
+            Cv2.Circle(mat, new OpenCvSharp.Point((int)p.X, (int)p.Y), 4, color, -1);
         }
     }
 

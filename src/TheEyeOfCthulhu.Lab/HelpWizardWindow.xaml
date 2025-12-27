@@ -1,0 +1,298 @@
+<Window x:Class="TheEyeOfCthulhu.Lab.HelpWizardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="📖 Guide de démarrage" 
+        Height="500" Width="650"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E"
+        ResizeMode="NoResize">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        
+        <!-- Contenu du wizard -->
+        <Border Grid.Row="0" Margin="20" Background="#252526" CornerRadius="8">
+            <Grid>
+                <!-- Page 1: Bienvenue -->
+                <StackPanel x:Name="Page1" Margin="30">
+                    <TextBlock Text="👁️ Bienvenue dans The Eye of Cthulhu !" 
+                               Foreground="#4EC9B0" 
+                               FontSize="24" 
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,20" />
+                    
+                    <TextBlock Text="Un outil de vision industrielle simple et puissant." 
+                               Foreground="#888" 
+                               FontSize="14"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,30" />
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+                        <StackPanel>
+                            <TextBlock Text="Ce que vous pouvez faire :" Foreground="#DCDCAA" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" />
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="📷" FontSize="16" Width="30" />
+                                <TextBlock Text="Connecter une caméra (téléphone ou webcam)" Foreground="#CCC" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="🔍" FontSize="16" Width="30" />
+                                <TextBlock Text="Détecter des objets en temps réel" Foreground="#CCC" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="🎯" FontSize="16" Width="30" />
+                                <TextBlock Text="Suivre la position et l'orientation" Foreground="#CCC" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="💾" FontSize="16" Width="30" />
+                                <TextBlock Text="Sauvegarder vos modèles pour les réutiliser" Foreground="#CCC" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Text="Cliquez sur Suivant pour commencer !" 
+                               Foreground="#888" 
+                               FontSize="12"
+                               HorizontalAlignment="Center"
+                               FontStyle="Italic" />
+                </StackPanel>
+                
+                <!-- Page 2: Connexion caméra -->
+                <StackPanel x:Name="Page2" Margin="30" Visibility="Collapsed">
+                    <TextBlock Text="① Connexion caméra" 
+                               Foreground="#4EC9B0" 
+                               FontSize="22" 
+                               FontWeight="Bold"
+                               Margin="0,0,0,20" />
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="📱 Option A : DroidCam (recommandé)" Foreground="#C586C0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock TextWrapping="Wrap" Foreground="#AAA" FontSize="12" LineHeight="20">
+                                1. Installez l'app "DroidCam" sur votre téléphone Android&#x0a;
+                                2. Ouvrez l'app et notez l'adresse IP affichée&#x0a;
+                                3. Dans l'application, entrez cette IP et cliquez "Démarrer"&#x0a;
+                                4. Votre téléphone devient une caméra HD sans fil !
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="🖥️ Option B : Webcam USB" Foreground="#C586C0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock TextWrapping="Wrap" Foreground="#AAA" FontSize="12" LineHeight="20">
+                                1. Branchez votre webcam USB&#x0a;
+                                2. Sélectionnez "Webcam (USB)" dans la liste&#x0a;
+                                3. Cliquez "Démarrer"
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Text="💡 Astuce : DroidCam offre une meilleure qualité et plus de flexibilité !" 
+                               Foreground="#DCDCAA" 
+                               FontSize="11"
+                               Margin="0,15,0,0"
+                               FontStyle="Italic" />
+                </StackPanel>
+                
+                <!-- Page 3: Créer un modèle -->
+                <StackPanel x:Name="Page3" Margin="30" Visibility="Collapsed">
+                    <TextBlock Text="② Créer un modèle" 
+                               Foreground="#C586C0" 
+                               FontSize="22" 
+                               FontWeight="Bold"
+                               Margin="0,0,0,20" />
+                    
+                    <TextBlock Text="Un 'modèle' est l'image de l'objet que vous voulez détecter." 
+                               Foreground="#888" 
+                               FontSize="12"
+                               Margin="0,0,0,15" />
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="📁 Méthode 1 : Charger une image (plus simple)" Foreground="#4EC9B0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock TextWrapping="Wrap" Foreground="#AAA" FontSize="12" LineHeight="20">
+                                1. Cliquez "📁 Charger une image..."&#x0a;
+                                2. Sélectionnez une photo de votre objet&#x0a;
+                                3. Dans la fenêtre qui s'ouvre, cliquez sur le FOND pour le supprimer&#x0a;
+                                4. Cliquez "Apply and Close"
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="📷 Méthode 2 : Capturer depuis la caméra" Foreground="#4EC9B0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock TextWrapping="Wrap" Foreground="#AAA" FontSize="12" LineHeight="20">
+                                1. Placez l'objet devant la caméra&#x0a;
+                                2. Cochez "✂️ Sélectionner une zone" et dessinez un rectangle&#x0a;
+                                3. Cliquez "📷 Capturer depuis caméra"&#x0a;
+                                4. Optionnel : Cliquez "🪄 Définir contour" pour un meilleur résultat
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                
+                <!-- Page 4: Lancer la détection -->
+                <StackPanel x:Name="Page4" Margin="30" Visibility="Collapsed">
+                    <TextBlock Text="③ Lancer la détection" 
+                               Foreground="#DCDCAA" 
+                               FontSize="22" 
+                               FontWeight="Bold"
+                               Margin="0,0,0,20" />
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="🔍 Activer la détection" Foreground="#4EC9B0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock TextWrapping="Wrap" Foreground="#AAA" FontSize="12" LineHeight="20">
+                                1. Cochez "🔍 Activer la détection"&#x0a;
+                                2. Placez votre objet devant la caméra&#x0a;
+                                3. Un cadre vert apparaît quand l'objet est détecté !
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="⚙️ Choisir la méthode" Foreground="#4EC9B0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="• Template (rapide)" Foreground="#CCC" FontSize="12" />
+                                <TextBlock Text="   Idéal si l'objet ne tourne pas" Foreground="#666" FontSize="11" />
+                            </StackPanel>
+                            
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="• ORB (rotation)" Foreground="#CCC" FontSize="12" />
+                                <TextBlock Text="   Détecte l'objet même s'il tourne ou change de taille" Foreground="#666" FontSize="11" />
+                            </StackPanel>
+                            
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="• AKAZE (robuste)" Foreground="#CCC" FontSize="12" />
+                                <TextBlock Text="   Le plus précis, mais plus lent" Foreground="#666" FontSize="11" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Text="💡 Astuce : Ajustez le 'Score min' si la détection est trop sensible ou pas assez !" 
+                               Foreground="#DCDCAA" 
+                               FontSize="11"
+                               FontStyle="Italic" />
+                </StackPanel>
+                
+                <!-- Page 5: Astuces -->
+                <StackPanel x:Name="Page5" Margin="30" Visibility="Collapsed">
+                    <TextBlock Text="💡 Astuces et raccourcis" 
+                               Foreground="#4EC9B0" 
+                               FontSize="22" 
+                               FontWeight="Bold"
+                               Margin="0,0,0,20" />
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="🖱️ Contrôles souris" Foreground="#C586C0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            
+                            <Grid Margin="0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Molette" Foreground="#CCC" FontSize="12" />
+                                <TextBlock Text="Zoom avant/arrière" Foreground="#888" FontSize="12" Grid.Column="1" />
+                            </Grid>
+                            
+                            <Grid Margin="0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Clic molette + glisser" Foreground="#CCC" FontSize="12" />
+                                <TextBlock Text="Déplacer la vue" Foreground="#888" FontSize="12" Grid.Column="1" />
+                            </Grid>
+                            
+                            <Grid Margin="0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Double-clic droit" Foreground="#CCC" FontSize="12" />
+                                <TextBlock Text="Réinitialiser le zoom" Foreground="#888" FontSize="12" Grid.Column="1" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Border Background="#1A1A1A" CornerRadius="8" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="📌 Bonnes pratiques" Foreground="#C586C0" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            
+                            <TextBlock Text="• Utilisez un éclairage uniforme" Foreground="#AAA" FontSize="12" Margin="0,3" />
+                            <TextBlock Text="• Évitez les reflets sur l'objet" Foreground="#AAA" FontSize="12" Margin="0,3" />
+                            <TextBlock Text="• Le fond doit être différent de l'objet" Foreground="#AAA" FontSize="12" Margin="0,3" />
+                            <TextBlock Text="• Sauvegardez vos modèles avec 💾" Foreground="#AAA" FontSize="12" Margin="0,3" />
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Text="Vous êtes prêt ! Fermez cette fenêtre pour commencer." 
+                               Foreground="#4EC9B0" 
+                               FontSize="12"
+                               HorizontalAlignment="Center"
+                               Margin="0,20,0,0"
+                               FontWeight="Bold" />
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Navigation -->
+        <Border Grid.Row="1" Background="#252526" Padding="20,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                
+                <!-- Indicateur de page -->
+                <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                    <Ellipse x:Name="Dot1" Width="10" Height="10" Fill="#4EC9B0" Margin="3,0" />
+                    <Ellipse x:Name="Dot2" Width="10" Height="10" Fill="#444" Margin="3,0" />
+                    <Ellipse x:Name="Dot3" Width="10" Height="10" Fill="#444" Margin="3,0" />
+                    <Ellipse x:Name="Dot4" Width="10" Height="10" Fill="#444" Margin="3,0" />
+                    <Ellipse x:Name="Dot5" Width="10" Height="10" Fill="#444" Margin="3,0" />
+                </StackPanel>
+                
+                <!-- Checkbox "Ne plus afficher" -->
+                <CheckBox x:Name="DontShowAgainCheckBox" 
+                          Content="Ne plus afficher au démarrage" 
+                          Foreground="#666"
+                          FontSize="11"
+                          Grid.Column="1"
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Center" />
+                
+                <!-- Boutons -->
+                <Button x:Name="PrevButton" 
+                        Content="◀ Précédent" 
+                        Grid.Column="2"
+                        Padding="15,8"
+                        Margin="0,0,10,0"
+                        Click="PrevButton_Click"
+                        IsEnabled="False" />
+                
+                <Button x:Name="NextButton" 
+                        Content="Suivant ▶" 
+                        Grid.Column="3"
+                        Padding="15,8"
+                        Background="#0E7A0D"
+                        Foreground="White"
+                        Click="NextButton_Click" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

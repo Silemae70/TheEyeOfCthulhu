@@ -19,8 +19,8 @@ public class ElderSignMatch
     /// Position du point d'ancrage dans l'image.
     /// </summary>
     public PointF AnchorPosition => new(
-        Position.X + ElderSign.Anchor.X,
-        Position.Y + ElderSign.Anchor.Y);
+        Position.X + ElderSign.Anchor.X * Scale,
+        Position.Y + ElderSign.Anchor.Y * Scale);
 
     /// <summary>
     /// Score de confiance (0.0 - 1.0).
@@ -43,13 +43,33 @@ public class ElderSignMatch
     public double Scale { get; init; } = 1.0;
 
     /// <summary>
-    /// Rectangle englobant le match.
+    /// Les 4 coins du quadrilatère transformé (TopLeft, TopRight, BottomRight, BottomLeft).
+    /// Null si le matcher ne supporte pas cette info (ex: template matching).
     /// </summary>
-    public Rectangle BoundingBox => new(
-        (int)Position.X,
-        (int)Position.Y,
-        ElderSign.Width,
-        ElderSign.Height);
+    public PointF[]? TransformedCorners { get; init; }
+
+    /// <summary>
+    /// Rectangle englobant le match (axis-aligned bounding box).
+    /// </summary>
+    public Rectangle BoundingBox
+    {
+        get
+        {
+            if (TransformedCorners != null && TransformedCorners.Length == 4)
+            {
+                var minX = (int)TransformedCorners.Min(p => p.X);
+                var minY = (int)TransformedCorners.Min(p => p.Y);
+                var maxX = (int)TransformedCorners.Max(p => p.X);
+                var maxY = (int)TransformedCorners.Max(p => p.Y);
+                return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+            }
+            return new Rectangle(
+                (int)Position.X,
+                (int)Position.Y,
+                (int)(ElderSign.Width * Scale),
+                (int)(ElderSign.Height * Scale));
+        }
+    }
 
     public ElderSignMatch(ElderSign elderSign, PointF position, double score)
     {

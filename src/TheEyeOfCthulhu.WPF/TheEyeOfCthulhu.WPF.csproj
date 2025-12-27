@@ -6,6 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RootNamespace>TheEyeOfCthulhu.WPF</RootNamespace>
+    
+    <!-- Version Info -->
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    
+    <!-- Product Info -->
+    <Product>The Eye of Cthulhu</Product>
+    <Company>Laser Cheval</Company>
+    <Description>Industrial Vision Framework - WPF Controls</Description>
+    <Copyright>Copyright © Laser Cheval 2024-2025</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

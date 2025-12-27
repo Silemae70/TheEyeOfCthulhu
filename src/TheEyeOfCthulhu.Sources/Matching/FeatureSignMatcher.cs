@@ -159,7 +159,8 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
             var match = new ElderSignMatch(elderSign, result.Value.Position, score)
             {
                 Angle = result.Value.Angle,
-                Scale = result.Value.Scale
+                Scale = result.Value.Scale,
+                TransformedCorners = result.Value.Corners
             };
 
             return new ElderSignSearchResult(new[] { match }, sw.ElapsedMilliseconds);
@@ -230,7 +231,7 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
         }
     }
 
-    private (PointF Position, double Angle, double Scale)? ExtractTransformFromHomography(
+    private (PointF Position, double Angle, double Scale, PointF[] Corners)? ExtractTransformFromHomography(
         Mat homography, ElderSign elderSign, CachedTemplate template)
     {
         if (homography.Empty() || homography.Rows != 3 || homography.Cols != 3)
@@ -267,7 +268,12 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
         var topEdgeLength = Math.Sqrt(dx * dx + dy * dy);
         var scale = topEdgeLength / template.Width;
 
-        return (position, angle, scale);
+        // Convertir les coins en PointF Core
+        var coreCorners = transformedCorners
+            .Select(c => new PointF(c.X, c.Y))
+            .ToArray();
+
+        return (position, angle, scale, coreCorners);
     }
 
     private bool IsValidQuadrilateral(Point2f[] corners)

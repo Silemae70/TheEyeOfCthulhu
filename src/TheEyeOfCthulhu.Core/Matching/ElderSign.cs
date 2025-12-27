@@ -17,6 +17,18 @@ public class ElderSign : IDisposable
     public Frame Template { get; }
 
     /// <summary>
+    /// Masque binaire définissant la forme réelle de l'objet (null = rectangle complet).
+    /// Format: Gray8, mêmes dimensions que Template. 255 = objet, 0 = fond.
+    /// </summary>
+    public Frame? Mask { get; private set; }
+
+    /// <summary>
+    /// Points du contour de l'objet (null = pas de contour défini).
+    /// Utilisé pour dessiner la vraie forme au lieu d'un rectangle.
+    /// </summary>
+    public PointF[]? ContourPoints { get; private set; }
+
+    /// <summary>
     /// Largeur du template.
     /// </summary>
     public int Width => Template.Width;
@@ -48,6 +60,11 @@ public class ElderSign : IDisposable
     public DateTime CreatedAt { get; }
 
     /// <summary>
+    /// Indique si cet ElderSign a un masque/contour défini.
+    /// </summary>
+    public bool HasMask => Mask != null || ContourPoints != null;
+
+    /// <summary>
     /// Crée un nouvel ElderSign à partir d'une frame.
     /// </summary>
     public ElderSign(string name, Frame template)
@@ -71,9 +88,42 @@ public class ElderSign : IDisposable
         Anchor = anchor;
     }
 
+    /// <summary>
+    /// Définit le masque binaire de l'objet.
+    /// </summary>
+    public void SetMask(Frame mask)
+    {
+        if (mask.Width != Width || mask.Height != Height)
+            throw new ArgumentException("Mask dimensions must match template dimensions");
+        
+        Mask?.Dispose();
+        Mask = mask.Clone();
+    }
+
+    /// <summary>
+    /// Définit les points du contour de l'objet.
+    /// </summary>
+    public void SetContour(PointF[] points)
+    {
+        ArgumentNullException.ThrowIfNull(points);
+        if (points.Length < 3)
+            throw new ArgumentException("Contour must have at least 3 points");
+        
+        ContourPoints = points.ToArray(); // Copie
+    }
+
+    /// <summary>
+    /// Définit les points du contour à partir de points entiers.
+    /// </summary>
+    public void SetContour(Point[] points)
+    {
+        SetContour(points.Select(p => new PointF(p.X, p.Y)).ToArray());
+    }
+
     public void Dispose()
     {
         Template.Dispose();
+        Mask?.Dispose();
         GC.SuppressFinalize(this);
     }
 }
