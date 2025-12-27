@@ -361,3 +361,17 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# =====================================
+# The Eye of Cthulhu specific
+# =====================================
+
+# Setup output
+setup/output/
+
+# Captures and saved signs
+captures/
+eldersigns/
+
+# User settings
+*.local.json
