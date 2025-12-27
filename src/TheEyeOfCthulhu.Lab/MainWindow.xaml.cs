@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private ElderSign? _elderSign;
     private ElderSignProcessor? _elderSignProcessor;
     private bool _elderSignDetectionEnabled;
+    private int _selectedMatcherType = 0; // 0=Template, 1=ORB, 2=AKAZE
 
     public MainWindow()
     {
@@ -199,8 +200,15 @@ public partial class MainWindow : Window
                 MinScore = MinScoreSlider.Value
             };
 
-            // Créer le processeur
-            _elderSignProcessor = new ElderSignProcessor();
+            // Créer le processeur avec le bon matcher
+            IElderSignMatcher matcher = _selectedMatcherType switch
+            {
+                1 => new FeatureSignMatcher(FeatureDetectorType.ORB),
+                2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE),
+                _ => new TemplateSignMatcher()
+            };
+            
+            _elderSignProcessor = new ElderSignProcessor(matcher);
             _elderSignProcessor.AddElderSign(_elderSign);
             _elderSignProcessor.DrawMatches = true;
             _elderSignProcessor.ShowLabel = true;
@@ -295,6 +303,57 @@ public partial class MainWindow : Window
         if (_elderSign != null)
         {
             _elderSign.MinScore = MinScoreSlider.Value;
+        }
+    }
+
+    private void MatcherTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _selectedMatcherType = MatcherTypeComboBox.SelectedIndex;
+        
+        // Si on a déjà un ElderSign, recréer le processeur avec le nouveau matcher
+        if (_elderSign != null && _elderSignProcessor != null)
+        {
+            var wasEnabled = _elderSignDetectionEnabled;
+            
+            // Désactiver temporairement
+            if (wasEnabled)
+            {
+                EnableElderSignCheckBox.IsChecked = false;
+            }
+            
+            // Recréer le processeur
+            if (_pipeline != null)
+            {
+                _pipeline.Remove(_elderSignProcessor);
+            }
+            _elderSignProcessor.Dispose();
+            
+            IElderSignMatcher matcher = _selectedMatcherType switch
+            {
+                1 => new FeatureSignMatcher(FeatureDetectorType.ORB),
+                2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE),
+                _ => new TemplateSignMatcher()
+            };
+            
+            _elderSignProcessor = new ElderSignProcessor(matcher);
+            _elderSignProcessor.AddElderSign(_elderSign);
+            _elderSignProcessor.DrawMatches = true;
+            _elderSignProcessor.ShowLabel = true;
+            _elderSignProcessor.IsEnabled = false;
+            
+            // Réactiver si nécessaire
+            if (wasEnabled)
+            {
+                EnableElderSignCheckBox.IsChecked = true;
+            }
+            
+            var matcherName = _selectedMatcherType switch
+            {
+                1 => "ORB",
+                2 => "AKAZE",
+                _ => "Template"
+            };
+            ElderSignResultText.Text = $"🔄 Matcher changed to {matcherName}";
         }
     }
 
@@ -462,7 +521,20 @@ public partial class MainWindow : Window
                     var ey = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Y");
                     var score = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Score");
                     
-                    ElderSignResultText.Text = $"✅ FOUND!\nPos: ({ex:F0}, {ey:F0})\nScore: {score:P0}";
+                    var resultText = $"✅ FOUND!\nPos: ({ex:F0}, {ey:F0})\nScore: {score:P0}";
+                    
+                    // Afficher angle et scale si Feature matcher
+                    if (_selectedMatcherType > 0)
+                    {
+                        var angle = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Angle");
+                        var scale = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Scale");
+                        if (Math.Abs(angle) > 0.1 || Math.Abs(scale - 1.0) > 0.01)
+                        {
+                            resultText += $"\n🔄 {angle:F1}° | ×{scale:F2}";
+                        }
+                    }
+                    
+                    ElderSignResultText.Text = resultText;
                     ElderSignResultText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
                 }
                 else

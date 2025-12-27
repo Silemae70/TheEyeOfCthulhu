@@ -172,6 +172,8 @@ public class ElderSignProcessor : FrameProcessorBase
                     metadata[$"{name}.X"] = match.AnchorPosition.X;
                     metadata[$"{name}.Y"] = match.AnchorPosition.Y;
                     metadata[$"{name}.Score"] = match.Score;
+                    metadata[$"{name}.Angle"] = match.Angle;
+                    metadata[$"{name}.Scale"] = match.Scale;
                 }
                 else
                 {

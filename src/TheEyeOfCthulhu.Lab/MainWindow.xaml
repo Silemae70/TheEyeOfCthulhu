@@ -143,7 +143,19 @@
                               Checked="EnableElderSignCheckBox_Changed"
                               Unchecked="EnableElderSignCheckBox_Changed" />
                     
-                    <StackPanel Margin="10,0,0,0">
+                    <!-- Matcher Type -->
+                    <StackPanel Margin="10,5,0,0">
+                        <TextBlock Text="Matcher:" Foreground="#999" FontSize="11" />
+                        <ComboBox x:Name="MatcherTypeComboBox" 
+                                  Margin="0,3,0,0"
+                                  SelectionChanged="MatcherTypeComboBox_SelectionChanged">
+                            <ComboBoxItem Content="Template (fast, no rotation)" IsSelected="True" />
+                            <ComboBoxItem Content="ORB Features (rotation+scale)" />
+                            <ComboBoxItem Content="AKAZE Features (robust)" />
+                        </ComboBox>
+                    </StackPanel>
+                    
+                    <StackPanel Margin="10,5,0,0">
                         <TextBlock Text="Min Score:" Foreground="#999" FontSize="11" />
                         <Slider x:Name="MinScoreSlider" 
                                 Minimum="0.5" Maximum="0.99" Value="0.7" 
