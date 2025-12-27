@@ -98,6 +98,74 @@
                     
                     <Separator Margin="0,10" Background="#3F3F3F" />
                     
+                    <!-- 🔯 ELDER SIGN -->
+                    <TextBlock Text="🔯 ELDER SIGN" 
+                               Foreground="#C586C0" 
+                               FontWeight="Bold" 
+                               Margin="0,0,0,10" />
+                    
+                    <Button x:Name="CaptureElderSignButton" 
+                            Content="📷 Capture ElderSign" 
+                            Margin="0,0,0,5"
+                            Padding="10,8"
+                            Click="CaptureElderSignButton_Click"
+                            IsEnabled="False"
+                            Background="#6A0DAD"
+                            Foreground="White" />
+                    
+                    <Button x:Name="ClearElderSignButton" 
+                            Content="🗑️ Clear ElderSign" 
+                            Margin="0,0,0,10"
+                            Padding="10,8"
+                            Click="ClearElderSignButton_Click"
+                            IsEnabled="False" />
+                    
+                    <CheckBox x:Name="EnableElderSignCheckBox" 
+                              Content="Enable Detection" 
+                              Foreground="#C586C0"
+                              Margin="0,0,0,5"
+                              IsEnabled="False"
+                              Checked="EnableElderSignCheckBox_Changed"
+                              Unchecked="EnableElderSignCheckBox_Changed" />
+                    
+                    <StackPanel Margin="10,0,0,0">
+                        <TextBlock Text="Min Score:" Foreground="#999" FontSize="11" />
+                        <Slider x:Name="MinScoreSlider" 
+                                Minimum="0.5" Maximum="0.99" Value="0.7" 
+                                TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                ValueChanged="MinScoreSlider_ValueChanged" />
+                        <TextBlock x:Name="MinScoreText" Text="70%" Foreground="#999" FontSize="11" HorizontalAlignment="Right" Margin="0,-5,0,0" />
+                    </StackPanel>
+                    
+                    <Border x:Name="ElderSignPreview" 
+                            Background="#1A1A1A" 
+                            BorderBrush="#3F3F3F" 
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Height="80"
+                            Margin="0,10,0,0"
+                            Visibility="Collapsed">
+                        <Grid>
+                            <Image x:Name="ElderSignImage" Stretch="Uniform" Margin="5" />
+                            <TextBlock x:Name="ElderSignSizeText" 
+                                       Text="" 
+                                       Foreground="#888" 
+                                       FontSize="10"
+                                       VerticalAlignment="Bottom"
+                                       HorizontalAlignment="Right"
+                                       Margin="5" />
+                        </Grid>
+                    </Border>
+                    
+                    <TextBlock x:Name="ElderSignResultText" 
+                               Text="" 
+                               Foreground="#C586C0"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Margin="0,10,0,0" />
+                    
+                    <Separator Margin="0,15" Background="#3F3F3F" />
+                    
                     <!-- Processing Pipeline -->
                     <TextBlock Text="PROCESSING PIPELINE" 
                                Foreground="#888" 
