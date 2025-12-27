@@ -130,10 +130,35 @@
                     
                     <Button x:Name="ClearElderSignButton" 
                             Content="🗑️ Clear ElderSign" 
-                            Margin="0,0,0,10"
+                            Margin="0,0,0,5"
                             Padding="10,8"
                             Click="ClearElderSignButton_Click"
                             IsEnabled="False" />
+                    
+                    <!-- Save/Load ElderSign -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <Button x:Name="SaveElderSignButton" 
+                                Content="💾 Save" 
+                                Grid.Column="0" 
+                                Margin="0,0,3,0"
+                                Padding="8,6"
+                                Click="SaveElderSignButton_Click"
+                                IsEnabled="False"
+                                FontSize="11" />
+                        
+                        <Button x:Name="LoadElderSignButton" 
+                                Content="📂 Load" 
+                                Grid.Column="1" 
+                                Margin="3,0,0,0"
+                                Padding="8,6"
+                                Click="LoadElderSignButton_Click"
+                                FontSize="11" />
+                    </Grid>
                     
                     <CheckBox x:Name="EnableElderSignCheckBox" 
                               Content="Enable Detection" 

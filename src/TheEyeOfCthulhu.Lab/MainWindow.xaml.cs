@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
     private IFrameSource? _source;
     private ProcessingPipeline? _pipeline;
     private FrameRecorder? _recorder;
+    private ElderSignStorage? _elderSignStorage;
     
     // 🔯 ElderSign
     private ElderSign? _elderSign;
@@ -38,6 +40,8 @@ public partial class MainWindow : Window
             OutputDirectory = "captures",
             Format = ImageFormat.Png
         });
+        
+        _elderSignStorage = new ElderSignStorage("eldersigns");
 
         CreatePipeline();
         
@@ -219,6 +223,7 @@ public partial class MainWindow : Window
             
             // Activer les contrôles
             ClearElderSignButton.IsEnabled = true;
+            SaveElderSignButton.IsEnabled = true;
             EnableElderSignCheckBox.IsEnabled = true;
             
             var roiText = hasRoi ? $" (from ROI {roiInfo.Width}x{roiInfo.Height})" : " (full frame)";
@@ -258,10 +263,122 @@ public partial class MainWindow : Window
         EnableElderSignCheckBox.IsChecked = false;
         EnableElderSignCheckBox.IsEnabled = false;
         ClearElderSignButton.IsEnabled = false;
+        SaveElderSignButton.IsEnabled = false;
         
         ElderSignPreview.Visibility = Visibility.Collapsed;
         ElderSignImage.Source = null;
         ElderSignResultText.Text = "";
+    }
+
+    private void SaveElderSignButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_elderSign == null || _elderSignStorage == null) return;
+
+        try
+        {
+            // Demander un nom
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Save ElderSign",
+                InitialDirectory = Path.GetFullPath("eldersigns"),
+                FileName = _elderSign.Name,
+                DefaultExt = ".json",
+                Filter = "ElderSign|*.json"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                var name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                
+                // Renommer si nécessaire
+                if (name != _elderSign.Name)
+                {
+                    var newSign = new ElderSign(name, _elderSign.Template, _elderSign.Anchor)
+                    {
+                        MinScore = _elderSign.MinScore
+                    };
+                    _elderSign.Dispose();
+                    _elderSign = newSign;
+                    
+                    // Mettre à jour le processeur
+                    if (_elderSignProcessor != null)
+                    {
+                        _elderSignProcessor.ClearElderSigns();
+                        _elderSignProcessor.AddElderSign(_elderSign);
+                    }
+                }
+                
+                _elderSignStorage.Save(_elderSign);
+                ElderSignResultText.Text = $"💾 Saved as '{name}'";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Save failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LoadElderSignButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_elderSignStorage == null) return;
+
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Load ElderSign",
+                InitialDirectory = Path.GetFullPath("eldersigns"),
+                DefaultExt = ".json",
+                Filter = "ElderSign|*.json"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                var name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                var loaded = _elderSignStorage.Load(name);
+                
+                if (loaded == null)
+                {
+                    MessageBox.Show($"Failed to load '{name}'", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Nettoyer l'ancien
+                ClearElderSign();
+
+                // Utiliser le nouveau
+                _elderSign = loaded;
+                _elderSign.MinScore = MinScoreSlider.Value;
+
+                // Créer le processeur
+                IElderSignMatcher matcher = _selectedMatcherType switch
+                {
+                    1 => new FeatureSignMatcher(FeatureDetectorType.ORB),
+                    2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE),
+                    _ => new TemplateSignMatcher()
+                };
+                
+                _elderSignProcessor = new ElderSignProcessor(matcher);
+                _elderSignProcessor.AddElderSign(_elderSign);
+                _elderSignProcessor.DrawMatches = true;
+                _elderSignProcessor.ShowLabel = true;
+                _elderSignProcessor.IsEnabled = false;
+
+                // Afficher la preview
+                ShowElderSignPreview(_elderSign.Template);
+                
+                // Activer les contrôles
+                ClearElderSignButton.IsEnabled = true;
+                SaveElderSignButton.IsEnabled = true;
+                EnableElderSignCheckBox.IsEnabled = true;
+                
+                ElderSignResultText.Text = $"📂 Loaded '{name}' ({_elderSign.Width}x{_elderSign.Height})";
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Load failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void EnableElderSignCheckBox_Changed(object sender, RoutedEventArgs e)
