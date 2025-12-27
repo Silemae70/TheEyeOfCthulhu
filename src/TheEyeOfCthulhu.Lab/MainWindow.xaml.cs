@@ -53,7 +53,8 @@ public partial class MainWindow : Window
             .Add(new GaussianBlurProcessor { KernelSize = 5, IsEnabled = BlurCheckBox.IsChecked == true })
             .Add(new ThresholdProcessor { UseOtsu = true, IsEnabled = ThresholdCheckBox.IsChecked == true })
             .Add(new CannyEdgeProcessor { Threshold1 = 50, Threshold2 = 150, IsEnabled = CannyCheckBox.IsChecked == true })
-            .Add(new ContourDetectorProcessor { MinArea = 500, DrawContours = true, IsEnabled = ContoursCheckBox.IsChecked == true });
+            .Add(new ContourDetectorProcessor { MinArea = 500, DrawContours = true, IsEnabled = ContoursCheckBox.IsChecked == true })
+            .Add(new HoughCirclesProcessor { IsEnabled = false }); // Désactivé par défaut
 
         if (EnablePipelineCheckBox.IsChecked == true)
         {
@@ -96,10 +97,11 @@ public partial class MainWindow : Window
             StopButton.IsEnabled = true;
             SnapshotButton.IsEnabled = true;
             CaptureElderSignButton.IsEnabled = true;
+            RoiModeCheckBox.IsEnabled = true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to start: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, "Connection Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
             StartButton.IsEnabled = true;
         }
     }
@@ -119,6 +121,8 @@ public partial class MainWindow : Window
             StopButton.IsEnabled = false;
             SnapshotButton.IsEnabled = false;
             CaptureElderSignButton.IsEnabled = false;
+            RoiModeCheckBox.IsEnabled = false;
+            RoiModeCheckBox.IsChecked = false;
         }
         catch (Exception ex)
         {
@@ -147,11 +151,39 @@ public partial class MainWindow : Window
 
     #region 🔯 ElderSign
 
+    private void RoiModeCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        VisionView.RoiSelectionEnabled = RoiModeCheckBox.IsChecked == true;
+        
+        if (RoiModeCheckBox.IsChecked == true)
+        {
+            RoiInfoText.Text = "🎯 Draw a rectangle on the image";
+            RoiInfoText.Foreground = new SolidColorBrush(Color.FromRgb(0, 206, 209));
+        }
+        else
+        {
+            VisionView.ClearRoiSelection();
+            RoiInfoText.Text = "💡 Enable ROI mode to select a region";
+            RoiInfoText.Foreground = new SolidColorBrush(Color.FromRgb(102, 102, 102));
+        }
+    }
+
+    private void VisionView_RoiSelected(object? sender, Int32Rect roi)
+    {
+        RoiInfoText.Text = $"✅ ROI: {roi.Width}x{roi.Height} at ({roi.X}, {roi.Y})";
+        RoiInfoText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
+    }
+
     private void CaptureElderSignButton_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var frame = VisionView.CaptureFrame();
+            // Sauvegarder la ROI AVANT de désactiver le mode (sinon elle est effacée)
+            var hasRoi = VisionView.SelectedRoi.HasValue;
+            var roiInfo = hasRoi ? VisionView.SelectedRoi.Value : default;
+            
+            // Utiliser CaptureRoi() qui capture soit la ROI soit toute la frame
+            var frame = VisionView.CaptureRoi();
             if (frame == null)
             {
                 MessageBox.Show("No frame available", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -172,7 +204,7 @@ public partial class MainWindow : Window
             _elderSignProcessor.AddElderSign(_elderSign);
             _elderSignProcessor.DrawMatches = true;
             _elderSignProcessor.ShowLabel = true;
-            _elderSignProcessor.IsEnabled = false; // Désactivé par défaut
+            _elderSignProcessor.IsEnabled = false;
 
             // Afficher la preview
             ShowElderSignPreview(frame);
@@ -180,8 +212,13 @@ public partial class MainWindow : Window
             // Activer les contrôles
             ClearElderSignButton.IsEnabled = true;
             EnableElderSignCheckBox.IsEnabled = true;
-            ElderSignResultText.Text = "🔯 ElderSign captured! Enable detection to start.";
+            
+            var roiText = hasRoi ? $" (from ROI {roiInfo.Width}x{roiInfo.Height})" : " (full frame)";
+            ElderSignResultText.Text = $"🔯 ElderSign captured{roiText}! Enable detection to start.";
 
+            // Désactiver le mode ROI APRES la capture
+            RoiModeCheckBox.IsChecked = false;
+            
             frame.Dispose();
         }
         catch (Exception ex)
@@ -265,7 +302,6 @@ public partial class MainWindow : Window
     {
         try
         {
-            // Convertir Frame en BitmapSource pour WPF
             var bitmap = new WriteableBitmap(
                 frame.Width, 
                 frame.Height, 
@@ -329,18 +365,57 @@ public partial class MainWindow : Window
     {
         if (_pipeline == null) return;
 
-        // Trouver les processeurs par nom
         var grayscale = _pipeline.GetProcessor<GrayscaleProcessor>("Grayscale");
         var blur = _pipeline.GetProcessor<GaussianBlurProcessor>("GaussianBlur");
         var threshold = _pipeline.GetProcessor<ThresholdProcessor>("Threshold");
         var canny = _pipeline.GetProcessor<CannyEdgeProcessor>("CannyEdge");
         var contours = _pipeline.GetProcessor<ContourDetectorProcessor>("ContourDetector");
+        var houghCircles = _pipeline.GetProcessor<HoughCirclesProcessor>("HoughCircles");
 
         if (grayscale != null) grayscale.IsEnabled = GrayscaleCheckBox.IsChecked == true;
         if (blur != null) blur.IsEnabled = BlurCheckBox.IsChecked == true;
         if (threshold != null) threshold.IsEnabled = ThresholdCheckBox.IsChecked == true;
         if (canny != null) canny.IsEnabled = CannyCheckBox.IsChecked == true;
         if (contours != null) contours.IsEnabled = ContoursCheckBox.IsChecked == true;
+        
+        // HoughCircles
+        if (houghCircles != null)
+        {
+            houghCircles.IsEnabled = HoughCirclesCheckBox.IsChecked == true;
+            HoughCirclesSettings.Visibility = houghCircles.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+            
+            if (houghCircles.IsEnabled)
+            {
+                UpdateHoughCirclesSettings();
+            }
+        }
+    }
+
+    private void HoughSlider_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        UpdateHoughCirclesSettings();
+    }
+
+    private void HoughSlider_LostCapture(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        UpdateHoughCirclesSettings();
+    }
+
+    private void UpdateHoughCirclesSettings()
+    {
+        if (_pipeline == null) return;
+        
+        var houghCircles = _pipeline.GetProcessor<HoughCirclesProcessor>("HoughCircles");
+        if (houghCircles == null) return;
+
+        houghCircles.MinRadius = (int)HoughMinRadiusSlider.Value;
+        houghCircles.MaxRadius = (int)HoughMaxRadiusSlider.Value;
+        houghCircles.AccumulatorThreshold = HoughSensitivitySlider.Value;
+        
+        // Mettre à jour les labels des sliders
+        HoughMinRadiusText.Text = $"{houghCircles.MinRadius}";
+        HoughMaxRadiusText.Text = $"{houghCircles.MaxRadius}";
+        HoughSensitivityText.Text = $"{houghCircles.AccumulatorThreshold:F0}";
     }
 
     private void VisionView_ImageClicked(object? sender, System.Windows.Point e)
@@ -352,16 +427,28 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(() =>
         {
-            // Afficher les infos de processing
             var contourCount = e.GetMetadata<int>("ContourDetector", "ContourCount");
+            var circleCount = e.GetMetadata<int>("HoughCircles", "CircleCount");
             
-            if (contourCount > 0)
+            var info = $"Processing: {e.TotalProcessingTimeMs:F1}ms";
+            if (contourCount > 0) info += $" | Contours: {contourCount}";
+            if (circleCount > 0) info += $" | Circles: {circleCount}";
+            
+            ProcessingInfoText.Text = info;
+
+            // 🔵 Afficher les infos du plus grand cercle
+            if (circleCount > 0 && HoughCirclesCheckBox.IsChecked == true)
             {
-                ProcessingInfoText.Text = $"Processing: {e.TotalProcessingTimeMs:F1}ms | Contours: {contourCount}";
+                var radius = e.GetMetadata<float>("HoughCircles", "LargestCircle.Radius");
+                var diameter = e.GetMetadata<float>("HoughCircles", "LargestCircle.Diameter");
+                var x = e.GetMetadata<float>("HoughCircles", "LargestCircle.X");
+                var y = e.GetMetadata<float>("HoughCircles", "LargestCircle.Y");
+                
+                HoughResultText.Text = $"✅ {circleCount} cercle(s)\nPlus grand: R={radius:F0}px (Ø{diameter:F0}px)\nCentre: ({x:F0}, {y:F0})";
             }
-            else
+            else if (HoughCirclesCheckBox.IsChecked == true)
             {
-                ProcessingInfoText.Text = $"Processing: {e.TotalProcessingTimeMs:F1}ms";
+                HoughResultText.Text = "❌ Aucun cercle détecté";
             }
 
             // 🔯 Afficher les résultats ElderSign
@@ -371,11 +458,11 @@ public partial class MainWindow : Window
                 
                 if (found)
                 {
-                    var x = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.X");
-                    var y = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Y");
+                    var ex = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.X");
+                    var ey = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Y");
                     var score = e.GetMetadata<double>("ElderSignDetector", $"{_elderSign.Name}.Score");
                     
-                    ElderSignResultText.Text = $"✅ FOUND!\nPos: ({x:F0}, {y:F0})\nScore: {score:P0}";
+                    ElderSignResultText.Text = $"✅ FOUND!\nPos: ({ex:F0}, {ey:F0})\nScore: {score:P0}";
                     ElderSignResultText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
                 }
                 else

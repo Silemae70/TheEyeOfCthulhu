@@ -9,13 +9,25 @@ namespace TheEyeOfCthulhu.Sources.Matching;
 
 /// <summary>
 /// Processeur qui recherche des ElderSigns dans les frames et dessine les résultats.
+/// Non-bloquant : le matching tourne en arrière-plan et on dessine le dernier résultat connu.
 /// </summary>
 public class ElderSignProcessor : FrameProcessorBase
 {
     private readonly IElderSignMatcher _matcher;
     private readonly List<ElderSign> _elderSigns = new();
-
+    private readonly object _resultLock = new();
+    
+    // Cache du dernier résultat pour ne pas bloquer
+    private Dictionary<string, ElderSignSearchResult>? _lastResults;
+    private bool _isSearching;
+    private long _lastSearchFrame;
+    
     public override string Name => "ElderSignDetector";
+
+    /// <summary>
+    /// Nombre de frames à skipper entre chaque recherche (0 = chaque frame).
+    /// </summary>
+    public int FrameSkip { get; set; } = 3;
 
     /// <summary>
     /// Dessiner les matches sur l'image de sortie.
@@ -81,6 +93,10 @@ public class ElderSignProcessor : FrameProcessorBase
     public void ClearElderSigns()
     {
         _elderSigns.Clear();
+        lock (_resultLock)
+        {
+            _lastResults = null;
+        }
     }
 
     /// <summary>
@@ -95,33 +111,85 @@ public class ElderSignProcessor : FrameProcessorBase
             return (input, null);
         }
 
-        var allResults = _matcher.SearchAll(input, _elderSigns);
-
-        var metadata = new Dictionary<string, object>
+        // Lancer une recherche si on n'est pas déjà en train de chercher et si assez de frames sont passées
+        var shouldSearch = !_isSearching && (input.FrameNumber - _lastSearchFrame >= FrameSkip);
+        
+        if (shouldSearch)
         {
-            ["MatchCount"] = allResults.Values.Sum(r => r.Found ? 1 : 0),
-            ["TotalSearchTimeMs"] = allResults.Values.Sum(r => r.SearchTimeMs),
-            ["Results"] = allResults
-        };
-
-        // Ajouter les positions individuelles
-        foreach (var (name, result) in allResults)
-        {
-            if (result.Found && result.BestMatch != null)
+            _isSearching = true;
+            _lastSearchFrame = input.FrameNumber;
+            
+            // Cloner la frame pour le thread de recherche
+            var frameClone = input.Clone();
+            var signsSnapshot = _elderSigns.ToList();
+            
+            // Lancer la recherche en arrière-plan
+            Task.Run(() =>
             {
-                var match = result.BestMatch;
-                metadata[$"{name}.Found"] = true;
-                metadata[$"{name}.X"] = match.AnchorPosition.X;
-                metadata[$"{name}.Y"] = match.AnchorPosition.Y;
-                metadata[$"{name}.Score"] = match.Score;
+                try
+                {
+                    var results = _matcher.SearchAll(frameClone, signsSnapshot);
+                    
+                    lock (_resultLock)
+                    {
+                        _lastResults = results;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[ElderSign] Search error: {ex.Message}");
+                }
+                finally
+                {
+                    frameClone.Dispose();
+                    _isSearching = false;
+                }
+            });
+        }
+
+        // Utiliser le dernier résultat connu (peut être null au début)
+        Dictionary<string, ElderSignSearchResult>? currentResults;
+        lock (_resultLock)
+        {
+            currentResults = _lastResults;
+        }
+
+        // Construire les métadonnées
+        var metadata = new Dictionary<string, object>();
+        
+        if (currentResults != null)
+        {
+            metadata["MatchCount"] = currentResults.Values.Sum(r => r.Found ? 1 : 0);
+            metadata["TotalSearchTimeMs"] = currentResults.Values.Sum(r => r.SearchTimeMs);
+            metadata["Results"] = currentResults;
+
+            foreach (var (name, result) in currentResults)
+            {
+                if (result.Found && result.BestMatch != null)
+                {
+                    var match = result.BestMatch;
+                    metadata[$"{name}.Found"] = true;
+                    metadata[$"{name}.X"] = match.AnchorPosition.X;
+                    metadata[$"{name}.Y"] = match.AnchorPosition.Y;
+                    metadata[$"{name}.Score"] = match.Score;
+                }
+                else
+                {
+                    metadata[$"{name}.Found"] = false;
+                }
             }
-            else
+        }
+        else
+        {
+            // Pas encore de résultat
+            metadata["MatchCount"] = 0;
+            foreach (var sign in _elderSigns)
             {
-                metadata[$"{name}.Found"] = false;
+                metadata[$"{sign.Name}.Found"] = false;
             }
         }
 
-        if (!DrawMatches)
+        if (!DrawMatches || currentResults == null)
         {
             return (input, metadata);
         }
@@ -134,7 +202,7 @@ public class ElderSignProcessor : FrameProcessorBase
             ? mat.CvtColor(ColorConversionCodes.GRAY2BGR) 
             : mat.Clone();
 
-        foreach (var (name, result) in allResults)
+        foreach (var (name, result) in currentResults)
         {
             DrawResult(colorMat, name, result);
         }
@@ -191,7 +259,8 @@ public class ElderSignProcessor : FrameProcessorBase
         {
             // Afficher "NOT FOUND" en haut de l'image
             var label = $"{name}: NOT FOUND";
-            var yOffset = 30 + (_elderSigns.IndexOf(_elderSigns.First(s => s.Name == name)) * 25);
+            var signIndex = _elderSigns.FindIndex(s => s.Name == name);
+            var yOffset = 30 + (signIndex * 25);
             Cv2.PutText(mat, label, new OpenCvSharp.Point(10, yOffset), 
                 HersheyFonts.HersheySimplex, 0.6, NotFoundColor, 2);
         }
@@ -199,6 +268,14 @@ public class ElderSignProcessor : FrameProcessorBase
 
     public override void Dispose()
     {
+        // Attendre que la recherche en cours se termine
+        var timeout = 0;
+        while (_isSearching && timeout < 50)
+        {
+            Thread.Sleep(10);
+            timeout++;
+        }
+        
         _matcher.Dispose();
         foreach (var sign in _elderSigns)
         {

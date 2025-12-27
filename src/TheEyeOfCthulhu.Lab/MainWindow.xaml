@@ -21,7 +21,8 @@
                 CornerRadius="4">
             <eye:VisionView x:Name="VisionView" 
                             ShowInfo="True"
-                            ImageClicked="VisionView_ImageClicked" />
+                            ImageClicked="VisionView_ImageClicked"
+                            RoiSelected="VisionView_RoiSelected" />
         </Border>
         
         <!-- Panneau de contrôle -->
@@ -104,6 +105,14 @@
                                FontWeight="Bold" 
                                Margin="0,0,0,10" />
                     
+                    <CheckBox x:Name="RoiModeCheckBox" 
+                              Content="✂️ Select ROI (draw rectangle)" 
+                              Foreground="#00CED1"
+                              Margin="0,0,0,10"
+                              Checked="RoiModeCheckBox_Changed"
+                              Unchecked="RoiModeCheckBox_Changed"
+                              IsEnabled="False" />
+                    
                     <Button x:Name="CaptureElderSignButton" 
                             Content="📷 Capture ElderSign" 
                             Margin="0,0,0,5"
@@ -112,6 +121,12 @@
                             IsEnabled="False"
                             Background="#6A0DAD"
                             Foreground="White" />
+                    
+                    <TextBlock x:Name="RoiInfoText" 
+                               Text="💡 Enable ROI mode to select a region" 
+                               Foreground="#666"
+                               FontSize="10"
+                               Margin="0,0,0,10" />
                     
                     <Button x:Name="ClearElderSignButton" 
                             Content="🗑️ Clear ElderSign" 
@@ -185,6 +200,43 @@
                         <CheckBox x:Name="ThresholdCheckBox" Content="Threshold (Otsu)" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
                         <CheckBox x:Name="CannyCheckBox" Content="Canny Edge" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
                         <CheckBox x:Name="ContoursCheckBox" Content="Contour Detection" Foreground="#CCC" IsChecked="True" Margin="0,4" Click="ProcessorCheckBox_Click" />
+                        <CheckBox x:Name="HoughCirclesCheckBox" Content="🔵 Hough Circles" Foreground="#4FC3F7" IsChecked="False" Margin="0,4" Click="ProcessorCheckBox_Click" />
+                    </StackPanel>
+                    
+                    <!-- Hough Circles Settings -->
+                    <StackPanel x:Name="HoughCirclesSettings" Margin="10,10,0,0" Visibility="Collapsed">
+                        <TextBlock Text="Min Radius:" Foreground="#4FC3F7" FontSize="10" />
+                        <Grid>
+                            <Slider x:Name="HoughMinRadiusSlider" Minimum="0" Maximum="200" Value="20" 
+                                    TickFrequency="10" IsSnapToTickEnabled="True" 
+                                    PreviewMouseUp="HoughSlider_MouseUp" 
+                                    LostMouseCapture="HoughSlider_LostCapture" />
+                            <TextBlock x:Name="HoughMinRadiusText" Text="20" Foreground="#888" FontSize="9" 
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        </Grid>
+                        
+                        <TextBlock Text="Max Radius:" Foreground="#4FC3F7" FontSize="10" Margin="0,5,0,0" />
+                        <Grid>
+                            <Slider x:Name="HoughMaxRadiusSlider" Minimum="0" Maximum="500" Value="200" 
+                                    TickFrequency="10" IsSnapToTickEnabled="True" 
+                                    PreviewMouseUp="HoughSlider_MouseUp" 
+                                    LostMouseCapture="HoughSlider_LostCapture" />
+                            <TextBlock x:Name="HoughMaxRadiusText" Text="200" Foreground="#888" FontSize="9" 
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        </Grid>
+                        
+                        <TextBlock Text="Sensitivity (lower=more):" Foreground="#4FC3F7" FontSize="10" Margin="0,5,0,0" />
+                        <Grid>
+                            <Slider x:Name="HoughSensitivitySlider" Minimum="10" Maximum="150" Value="50" 
+                                    TickFrequency="5" IsSnapToTickEnabled="True" 
+                                    PreviewMouseUp="HoughSlider_MouseUp" 
+                                    LostMouseCapture="HoughSlider_LostCapture" />
+                            <TextBlock x:Name="HoughSensitivityText" Text="50" Foreground="#888" FontSize="9" 
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        </Grid>
+                        
+                        <TextBlock x:Name="HoughResultText" Text="" Foreground="#4FC3F7" FontSize="11" 
+                                   Margin="0,8,0,0" TextWrapping="Wrap" FontWeight="SemiBold" />
                     </StackPanel>
                     
                     <Separator Margin="0,15" Background="#3F3F3F" />

@@ -13,10 +13,10 @@
 | Core | ✅ Stable | 30/30 |
 | Sources | ✅ Stable | 35/35 |
 | Processing | ✅ Stable | 24/24 |
-| Matching | ✅ Nouveau | 30+ |
+| Matching | ✅ Stable | 30+ |
 | WPF | ✅ Fonctionnel | - |
 | Lab | ✅ Fonctionnel | - |
-| **Total** | **✅ Opérationnel** | **135+** |
+| **Total** | **✅ Opérationnel** | **143+** |
 
 **Dernière mise à jour :** 2024-12-27
 
@@ -44,19 +44,61 @@ TheEyeOfCthulhu/
 │   │   ├── Webcam/                  # Source USB/virtuelle
 │   │   ├── File/                    # Image/Vidéo/Séquence
 │   │   ├── Processors/              # Processeurs d'image
+│   │   │   ├── BasicProcessors.cs   # Grayscale, Blur, Threshold, Canny, Contours
+│   │   │   ├── HoughCirclesProcessor.cs # 🔵 Détection de cercles
+│   │   │   └── FrameMatConverter.cs # Conversion Frame ↔ Mat
 │   │   ├── Recording/               # Snapshot vers fichier
 │   │   ├── Utilities/               # Helpers
 │   │   └── Matching/                # 🔯 Implémentations matchers
 │   │       ├── TemplateSignMatcher.cs   # Template matching OpenCV
-│   │       └── ElderSignProcessor.cs    # Processeur pour pipeline
+│   │       └── ElderSignProcessor.cs    # Processeur async pour pipeline
 │   │
 │   ├── TheEyeOfCthulhu.WPF/         # Contrôles UI réutilisables
+│   │   └── Controls/
+│   │       └── VisionView.xaml      # 🎥 Contrôle vidéo avec zoom/pan/ROI
+│   │
 │   ├── TheEyeOfCthulhu.Lab/         # Application de démo
 │   ├── TheEyeOfCthulhu.Console/     # App console de test
 │   └── TheEyeOfCthulhu.Tests/       # Tests xUnit
 │
 └── docs/
     └── README.md                    # Ce fichier
+```
+
+---
+
+## 🎥 VisionView - Contrôle Vidéo
+
+Le **VisionView** est le contrôle WPF principal pour afficher un flux vidéo avec des fonctionnalités avancées.
+
+### Fonctionnalités
+
+| Feature | Contrôle | Description |
+|---------|----------|-------------|
+| **Zoom** | 🖱️ Molette | Zoom 50% → 1000%, centré sur le curseur |
+| **Pan** | 🖱️ Clic molette + glisser | Déplacer l'image zoomée |
+| **Reset Zoom** | 🖱️ Double-clic droit | Retour à 100% |
+| **ROI Selection** | 🖱️ Clic gauche + glisser | Sélectionner une zone d'intérêt |
+| **Capture ROI** | Code | Capturer uniquement la zone sélectionnée |
+
+### Utilisation
+
+```csharp
+// Définir la source
+VisionView.SetSource(myFrameSource);
+
+// Définir le pipeline de traitement (optionnel)
+VisionView.SetPipeline(myPipeline);
+
+// Démarrer
+await VisionView.StartAsync();
+
+// Activer la sélection ROI
+VisionView.RoiSelectionEnabled = true;
+
+// Capturer (ROI ou frame complète)
+var frame = VisionView.CaptureRoi();
+var originalFrame = VisionView.CaptureOriginalFrame(); // Avant pipeline
 ```
 
 ---
@@ -75,7 +117,7 @@ L'**ElderSign** est le système de pattern matching du framework. Il permet de r
 
 ```csharp
 // 1. Créer un ElderSign depuis une image de référence
-var templateFrame = LoadTemplateImage(); // Ta méthode pour charger l'image
+var templateFrame = LoadTemplateImage();
 var elderSign = new ElderSign("MaPièce", templateFrame)
 {
     MinScore = 0.8  // Score minimum pour valider un match
@@ -95,21 +137,25 @@ if (result.Found)
 }
 ```
 
-### Dans un Pipeline
+### Dans un Pipeline (Async, Non-bloquant)
 
 ```csharp
 var processor = new ElderSignProcessor()
-    .AddElderSign(elderSign1)
-    .AddElderSign(elderSign2);
+{
+    FrameSkip = 3,      // Matcher toutes les 4 frames (performance)
+    DrawMatches = true,
+    ShowLabel = true
+};
+processor.AddElderSign(elderSign);
 
 var pipeline = new ProcessingPipeline("Detection")
-    .Add(new GrayscaleProcessor())
     .Add(processor);
 
+// Les résultats sont dans les métadonnées
 var result = pipeline.Process(frame);
-var found = result.GetMetadata<bool>("MaPièce.Found");
-var x = result.GetMetadata<double>("MaPièce.X");
-var y = result.GetMetadata<double>("MaPièce.Y");
+var found = result.GetMetadata<bool>("ElderSignDetector", "MaPièce.Found");
+var x = result.GetMetadata<double>("ElderSignDetector", "MaPièce.X");
+var y = result.GetMetadata<double>("ElderSignDetector", "MaPièce.Y");
 ```
 
 ### Matchers Disponibles
@@ -122,6 +168,50 @@ var y = result.GetMetadata<double>("MaPièce.Y");
 
 ---
 
+## 🔵 HoughCircles - Détection de Cercles
+
+Le **HoughCirclesProcessor** détecte les cercles dans l'image avec la transformée de Hough.
+
+### Utilisation
+
+```csharp
+var processor = new HoughCirclesProcessor
+{
+    MinRadius = 20,           // Rayon minimum
+    MaxRadius = 200,          // Rayon maximum (0 = pas de max)
+    AccumulatorThreshold = 50, // Sensibilité (plus bas = plus de détections)
+    DrawCircles = true,
+    ShowInfo = true
+};
+
+var pipeline = new ProcessingPipeline("Circles")
+    .Add(processor);
+
+var result = pipeline.Process(frame);
+
+// Résultats
+var count = result.GetMetadata<int>("HoughCircles", "CircleCount");
+var largestRadius = result.GetMetadata<float>("HoughCircles", "LargestCircle.Radius");
+var largestDiameter = result.GetMetadata<float>("HoughCircles", "LargestCircle.Diameter");
+var centerX = result.GetMetadata<float>("HoughCircles", "LargestCircle.X");
+var centerY = result.GetMetadata<float>("HoughCircles", "LargestCircle.Y");
+```
+
+### Paramètres
+
+| Paramètre | Défaut | Description |
+|-----------|--------|-------------|
+| `Dp` | 1.0 | Résolution accumulateur (1 = même que image) |
+| `MinDist` | 50 | Distance min entre centres |
+| `CannyThreshold` | 100 | Seuil Canny interne |
+| `AccumulatorThreshold` | 50 | Sensibilité (↓ = + détections) |
+| `MinRadius` | 0 | Rayon minimum |
+| `MaxRadius` | 0 | Rayon maximum (0 = illimité) |
+| `MaxCircles` | 10 | Nombre max de cercles |
+| `ApplyBlur` | true | Blur avant détection |
+
+---
+
 ## 📦 Sources Disponibles
 
 | Source | Description | État |
@@ -129,6 +219,16 @@ var y = result.GetMetadata<double>("MaPièce.Y");
 | `DroidCamSource` | Flux MJPEG depuis Android via WiFi | ✅ |
 | `WebcamSource` | Webcam USB ou virtuelle | ✅ |
 | `FileSource` | Image, vidéo, ou séquence d'images | ✅ |
+
+### DroidCam - Timeout et Messages d'erreur
+
+```csharp
+var config = DroidCamConfiguration.Create("192.168.1.57", 4747);
+config.ConnectionTimeoutSeconds = 10; // Timeout connexion
+
+var source = new DroidCamSource(config);
+// Messages d'erreur détaillés avec checklist si échec
+```
 
 ---
 
@@ -138,10 +238,11 @@ var y = result.GetMetadata<double>("MaPièce.Y");
 |------------|-------------|
 | `GrayscaleProcessor` | Conversion niveaux de gris |
 | `GaussianBlurProcessor` | Flou gaussien |
-| `ThresholdProcessor` | Seuillage binaire |
+| `ThresholdProcessor` | Seuillage binaire (Otsu supporté) |
 | `CannyEdgeProcessor` | Détection de contours |
 | `ContourDetectorProcessor` | Extraction de contours |
-| `ElderSignProcessor` | 🔯 Détection de patterns |
+| `HoughCirclesProcessor` | 🔵 Détection de cercles |
+| `ElderSignProcessor` | 🔯 Détection de patterns (async) |
 
 ---
 
@@ -152,9 +253,21 @@ cd E:\DEV\TheEyeOfCthulhu
 dotnet test
 ```
 
+**143+ tests unitaires** couvrant Core, Sources, Processing et Matching.
+
 ---
 
 ## 📝 Changelog
+
+### v0.4.0 (2024-12-27) - 🔵 CIRCLES & ZOOM
+- ✨ **HoughCirclesProcessor** : Détection de cercles avec paramètres ajustables
+- ✨ **VisionView Zoom** : Zoom molette (50%-1000%), pan clic molette, reset double-clic droit
+- ✨ **VisionView ROI** : Sélection rectangulaire, capture ROI, coordonnées temps réel
+- ✨ **ElderSignProcessor async** : Non-bloquant avec frame skip (UI fluide)
+- ✨ **DroidCam timeout** : Messages d'erreur détaillés avec checklist
+- 🔧 **Capture frame originale** : `CaptureOriginalFrame()` avant pipeline
+- 🔧 **Lab UI** : Sliders HoughCircles avec mise à jour au relâchement
+- 📝 Documentation mise à jour
 
 ### v0.3.0 (2024-12-27) - 🔯 THE ELDER FOR THE POWER
 - ✨ Ajout système **ElderSign** (Pattern Matching)
@@ -189,10 +302,10 @@ dotnet test
 - [ ] Multi-scale / Multi-angle search
 
 ### Phase 3 : Outils de Vision
-- [ ] Détection de cercles (HoughCircles)
+- [x] ~~Détection de cercles (HoughCircles)~~ ✅
 - [ ] Détection de lignes (HoughLines)
 - [ ] Blob detection
-- [ ] ROI (Region of Interest)
+- [x] ~~ROI (Region of Interest)~~ ✅
 - [ ] Mesures (distances, dimensions)
 
 ### Phase 4 : Calibration & Précision

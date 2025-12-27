@@ -35,6 +35,11 @@ public sealed class DroidCamConfiguration : SourceConfiguration
     public int SnapshotIntervalMs { get; set; } = 100;
 
     /// <summary>
+    /// Timeout de connexion en secondes.
+    /// </summary>
+    public int ConnectionTimeoutSeconds { get; set; } = 10;
+
+    /// <summary>
     /// URL complète du flux vidéo.
     /// </summary>
     public string VideoUrl => $"{(UseHttps ? "https" : "http")}://{IpAddress}:{Port}/video";
