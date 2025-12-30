@@ -1,0 +1,240 @@
+<Window x:Class="TheEyeOfCthulhu.Lab.ContourTracerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="✏️ Tracer le contour" 
+        Height="700" Width="1000"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E"
+        ResizeMode="CanResize">
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="220" />
+        </Grid.ColumnDefinitions>
+        
+        <!-- Zone de dessin avec zoom/pan -->
+        <Border Grid.Column="0" Margin="10" Background="#000" CornerRadius="4">
+            <Grid>
+                <ScrollViewer x:Name="ImageScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              Background="Transparent"
+                              PreviewMouseWheel="ImageScrollViewer_PreviewMouseWheel"
+                              PreviewMouseDown="ImageScrollViewer_PreviewMouseDown"
+                              PreviewMouseMove="ImageScrollViewer_PreviewMouseMove"
+                              PreviewMouseUp="ImageScrollViewer_PreviewMouseUp">
+                    <Grid x:Name="ImageContainer">
+                        <Grid.LayoutTransform>
+                            <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1" />
+                        </Grid.LayoutTransform>
+                        
+                        <!-- Image figée -->
+                        <Image x:Name="FrozenImage" 
+                               Stretch="None"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                        
+                        <!-- Canvas pour dessiner le contour (même taille que l'image) -->
+                        <Canvas x:Name="DrawingCanvas"
+                                Background="Transparent"
+                                MouseLeftButtonDown="DrawingCanvas_MouseLeftButtonDown"
+                                MouseLeftButtonUp="DrawingCanvas_MouseLeftButtonUp"
+                                MouseMove="DrawingCanvas_MouseMove"
+                                MouseRightButtonDown="DrawingCanvas_MouseRightButtonDown"
+                                ClipToBounds="True">
+                            
+                            <!-- Polyline du contour en cours -->
+                            <Polyline x:Name="ContourPolyline"
+                                      Stroke="#00FF00"
+                                      StrokeThickness="2"
+                                      StrokeLineJoin="Round" />
+                            
+                            <!-- Ligne de fermeture (preview) -->
+                            <Line x:Name="ClosingLine"
+                                  Stroke="#00FF00"
+                                  StrokeThickness="1"
+                                  StrokeDashArray="4 2"
+                                  Visibility="Collapsed" />
+                        </Canvas>
+                    </Grid>
+                </ScrollViewer>
+                
+                <!-- Instructions overlay -->
+                <Border Background="#CC000000" 
+                        VerticalAlignment="Top" 
+                        HorizontalAlignment="Center"
+                        Margin="0,10,0,0"
+                        Padding="15,8"
+                        CornerRadius="4"
+                        IsHitTestVisible="False">
+                    <TextBlock x:Name="InstructionText"
+                               Text="🖱️ Clic gauche = Point | Clic droit = Fermer | Molette = Zoom | Molette clic = Pan"
+                               Foreground="#4EC9B0"
+                               FontSize="12" />
+                </Border>
+                
+                <!-- Zoom indicator -->
+                <Border Background="#CC000000" 
+                        VerticalAlignment="Top" 
+                        HorizontalAlignment="Right"
+                        Margin="10"
+                        Padding="8,4"
+                        CornerRadius="4"
+                        IsHitTestVisible="False">
+                    <TextBlock x:Name="ZoomText"
+                               Text="100%"
+                               Foreground="#888"
+                               FontSize="11" />
+                </Border>
+                
+                <!-- Point count -->
+                <Border Background="#CC000000" 
+                        VerticalAlignment="Bottom" 
+                        HorizontalAlignment="Left"
+                        Margin="10"
+                        Padding="10,5"
+                        CornerRadius="4"
+                        IsHitTestVisible="False">
+                    <TextBlock x:Name="PointCountText"
+                               Text="Points: 0"
+                               Foreground="#888"
+                               FontSize="12" />
+                </Border>
+            </Grid>
+        </Border>
+        
+        <!-- Panneau de contrôle -->
+        <Border Grid.Column="1" Margin="0,10,10,10" Background="#2D2D2D" CornerRadius="4">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="15">
+                    
+                    <TextBlock Text="✏️ MODE TRACÉ" 
+                               Foreground="#4EC9B0" 
+                               FontWeight="Bold" 
+                               FontSize="14"
+                               Margin="0,0,0,15" />
+                    
+                    <!-- Mode de dessin -->
+                    <TextBlock Text="Mode :" Foreground="#888" FontSize="11" Margin="0,0,0,5" />
+                    <RadioButton x:Name="PointModeRadio" 
+                                 Content="🎯 Point par point" 
+                                 Foreground="#CCC" 
+                                 IsChecked="True"
+                                 Margin="0,0,0,5"
+                                 GroupName="DrawMode" />
+                    <RadioButton x:Name="FreeModeRadio" 
+                                 Content="✍️ Main levée" 
+                                 Foreground="#CCC"
+                                 Checked="FreeModeRadio_Checked"
+                                 Unchecked="FreeModeRadio_Unchecked"
+                                 GroupName="DrawMode" />
+                    
+                    <Separator Margin="0,15" Background="#3F3F3F" />
+                    
+                    <!-- Zoom -->
+                    <TextBlock Text="Zoom :" Foreground="#888" FontSize="11" Margin="0,0,0,5" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Content="−" Grid.Column="0" Margin="0,0,2,0" Click="ZoomOut_Click" />
+                        <Button Content="1:1" Grid.Column="1" Margin="2,0" Click="Zoom100_Click" />
+                        <Button Content="+" Grid.Column="2" Margin="2,0,0,0" Click="ZoomIn_Click" />
+                    </Grid>
+                    <Button Content="📐 Ajuster" Margin="0,5" Click="ZoomFit_Click" />
+                    
+                    <Separator Margin="0,15" Background="#3F3F3F" />
+                    
+                    <!-- Options -->
+                    <TextBlock Text="Options :" Foreground="#888" FontSize="11" Margin="0,0,0,5" />
+                    
+                    <CheckBox x:Name="ShowPointsCheckBox" 
+                              Content="Afficher les points" 
+                              Foreground="#CCC"
+                              IsChecked="True"
+                              Checked="ShowPointsCheckBox_Changed"
+                              Unchecked="ShowPointsCheckBox_Changed"
+                              Margin="0,5" />
+                    
+                    <CheckBox x:Name="SimplifyCheckBox" 
+                              Content="Simplifier le contour" 
+                              Foreground="#CCC"
+                              IsChecked="True"
+                              Margin="0,5" />
+                    
+                    <Separator Margin="0,15" Background="#3F3F3F" />
+                    
+                    <!-- Actions -->
+                    <Button x:Name="UndoButton" 
+                            Content="↩️ Annuler dernier point" 
+                            Padding="10,8"
+                            Margin="0,5"
+                            Click="UndoButton_Click"
+                            IsEnabled="False" />
+                    
+                    <Button x:Name="ClearButton" 
+                            Content="🗑️ Effacer tout" 
+                            Padding="10,8"
+                            Margin="0,5"
+                            Click="ClearButton_Click" />
+                    
+                    <Button x:Name="AutoDetectButton" 
+                            Content="✨ Détecter auto (Canny)" 
+                            Padding="10,8"
+                            Margin="0,5"
+                            Click="AutoDetectButton_Click"
+                            ToolTip="Détecte automatiquement les contours dans l'image" />
+                    
+                    <Separator Margin="0,15" Background="#3F3F3F" />
+                    
+                    <!-- Preview du contour -->
+                    <TextBlock Text="Aperçu :" Foreground="#888" FontSize="11" Margin="0,0,0,5" />
+                    <Border Background="#1A1A1A" 
+                            CornerRadius="4" 
+                            Height="100"
+                            Margin="0,5">
+                        <Image x:Name="ContourPreview" 
+                               Stretch="Uniform"
+                               Margin="5" />
+                    </Border>
+                    
+                    <!-- Info -->
+                    <TextBlock x:Name="InfoText"
+                               Text=""
+                               Foreground="#888"
+                               FontSize="10"
+                               TextWrapping="Wrap"
+                               Margin="0,10,0,0" />
+                    
+                    <!-- Boutons validation -->
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <Button Content="❌ Fermer" 
+                                Grid.Column="0"
+                                Padding="10,10"
+                                Margin="0,0,5,0"
+                                Click="CancelButton_Click"
+                                IsCancel="True" />
+                        
+                        <Button x:Name="ApplyButton" 
+                                Content="✅ Appliquer" 
+                                Grid.Column="1"
+                                Padding="10,10"
+                                Margin="5,0,0,0"
+                                Background="#0E7A0D"
+                                Foreground="White"
+                                Click="ApplyButton_Click"
+                                IsEnabled="False" />
+                    </Grid>
+                    
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

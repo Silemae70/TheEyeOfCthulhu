@@ -195,25 +195,37 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     
-                                    <Button x:Name="BackgroundRemoverButton" 
-                                            Content="🪄 Définir contour" 
+                                    <Button x:Name="ContourTracerButton" 
+                                            Content="✏️ Tracer" 
                                             Grid.Column="0"
-                                            Margin="0,0,3,0"
-                                            Padding="6,5"
+                                            Margin="0,0,2,0"
+                                            Padding="4,5"
+                                            Click="ContourTracerButton_Click"
+                                            IsEnabled="False"
+                                            FontSize="10"
+                                            ToolTip="Tracer manuellement le contour sur l'image" />
+                                    
+                                    <Button x:Name="BackgroundRemoverButton" 
+                                            Content="🪄 Fond" 
+                                            Grid.Column="1"
+                                            Margin="2,0,2,0"
+                                            Padding="4,5"
                                             Click="BackgroundRemoverButton_Click"
                                             IsEnabled="False"
-                                            FontSize="11" />
+                                            FontSize="10"
+                                            ToolTip="Supprimer le fond (Magic Wand)" />
                                     
                                     <Button x:Name="AutoContourButton" 
                                             Content="✨ Auto" 
-                                            Grid.Column="1" 
-                                            Margin="3,0,0,0"
-                                            Padding="6,5"
+                                            Grid.Column="2" 
+                                            Margin="2,0,0,0"
+                                            Padding="4,5"
                                             Click="AutoContourButton_Click"
                                             IsEnabled="False"
-                                            FontSize="11"
+                                            FontSize="10"
                                             ToolTip="Extraction automatique du contour" />
                                 </Grid>
                                 
@@ -299,6 +311,7 @@
                                     <ComboBoxItem Content="Template (rapide)" IsSelected="True" />
                                     <ComboBoxItem Content="ORB (rotation)" />
                                     <ComboBoxItem Content="AKAZE (robuste)" />
+                                    <ComboBoxItem Content="Shape (contour)" />
                                 </ComboBox>
                             </Grid>
                             
@@ -326,6 +339,16 @@
                                       IsEnabled="False"
                                       Checked="ShowTemplateOverlayCheckBox_Changed"
                                       Unchecked="ShowTemplateOverlayCheckBox_Changed" />
+                            
+                            <CheckBox x:Name="SearchInRoiCheckBox" 
+                                      Content="🎯 Chercher dans ROI uniquement" 
+                                      Foreground="#FF8C00"
+                                      FontSize="11"
+                                      Margin="0,5,0,0"
+                                      IsEnabled="False"
+                                      ToolTip="Limite la détection à la zone ROI sélectionnée"
+                                      Checked="SearchInRoiCheckBox_Changed"
+                                      Unchecked="SearchInRoiCheckBox_Changed" />
                         </StackPanel>
                     </Border>
                     
@@ -351,11 +374,11 @@
                                       Unchecked="EnablePipelineCheckBox_Changed" />
                             
                             <StackPanel x:Name="ProcessorsPanel" Margin="15,0,0,0">
-                                <CheckBox x:Name="GrayscaleCheckBox" Content="Grayscale" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
-                                <CheckBox x:Name="BlurCheckBox" Content="Blur" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
-                                <CheckBox x:Name="ThresholdCheckBox" Content="Threshold" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
-                                <CheckBox x:Name="CannyCheckBox" Content="Canny" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
-                                <CheckBox x:Name="ContoursCheckBox" Content="Contours" Foreground="#666" IsChecked="True" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="GrayscaleCheckBox" Content="Grayscale" Foreground="#666" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="BlurCheckBox" Content="Blur" Foreground="#666" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="ThresholdCheckBox" Content="Threshold" Foreground="#666" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="CannyCheckBox" Content="Canny" Foreground="#666" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
+                                <CheckBox x:Name="ContoursCheckBox" Content="Contours" Foreground="#666" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
                                 <CheckBox x:Name="HoughCirclesCheckBox" Content="🔵 Cercles" Foreground="#4FC3F7" IsChecked="False" Margin="0,3" Click="ProcessorCheckBox_Click" FontSize="11" />
                             </StackPanel>
                             

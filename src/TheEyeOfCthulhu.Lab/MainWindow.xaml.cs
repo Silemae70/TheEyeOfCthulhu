@@ -22,7 +22,7 @@ namespace TheEyeOfCthulhu.Lab;
 /// Main window for The Eye of Cthulhu Lab application.
 /// Provides a visual interface for camera connection, pattern matching, and image processing.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : System.Windows.Window
 {
     #region Fields
 
@@ -35,7 +35,9 @@ public partial class MainWindow : Window
     private ElderSign? _elderSign;
     private ElderSignProcessor? _elderSignProcessor;
     private bool _elderSignDetectionEnabled;
-    private int _selectedMatcherType; // 0=Template, 1=ORB, 2=AKAZE
+    private int _selectedMatcherType; // 0=Template, 1=ORB, 2=AKAZE, 3=Shape
+    private MatcherOptions _matcherOptions = new();
+    private Int32Rect? _searchRoi; // ROI pour la recherche (séparée de la ROI de capture)
 
     // Settings path
     private static readonly string SettingsDirectory = Path.Combine(
@@ -80,17 +82,15 @@ public partial class MainWindow : Window
     private void CreatePipeline()
     {
         _pipeline = new ProcessingPipeline("Lab Pipeline")
-            .Add(new GrayscaleProcessor { IsEnabled = GrayscaleCheckBox.IsChecked == true })
-            .Add(new GaussianBlurProcessor { KernelSize = 5, IsEnabled = BlurCheckBox.IsChecked == true })
-            .Add(new ThresholdProcessor { UseOtsu = true, IsEnabled = ThresholdCheckBox.IsChecked == true })
-            .Add(new CannyEdgeProcessor { Threshold1 = 50, Threshold2 = 150, IsEnabled = CannyCheckBox.IsChecked == true })
-            .Add(new ContourDetectorProcessor { MinArea = 500, DrawContours = true, IsEnabled = ContoursCheckBox.IsChecked == true })
+            .Add(new GrayscaleProcessor { IsEnabled = false })
+            .Add(new GaussianBlurProcessor { KernelSize = 5, IsEnabled = false })
+            .Add(new ThresholdProcessor { UseOtsu = true, IsEnabled = false })
+            .Add(new CannyEdgeProcessor { Threshold1 = 50, Threshold2 = 150, IsEnabled = false })
+            .Add(new ContourDetectorProcessor { MinArea = 500, DrawContours = true, IsEnabled = false })
             .Add(new HoughCirclesProcessor { IsEnabled = false });
 
-        if (EnablePipelineCheckBox.IsChecked == true)
-        {
-            VisionView.SetPipeline(_pipeline);
-        }
+        // Pipeline désactivé par défaut
+        // VisionView.SetPipeline(_pipeline);
     }
 
     #endregion
@@ -229,6 +229,16 @@ public partial class MainWindow : Window
     {
         RoiInfoText.Text = $"✅ ROI: {roi.Width}x{roi.Height} at ({roi.X}, {roi.Y})";
         RoiInfoText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
+        
+        // Stocker la ROI pour la recherche
+        _searchRoi = roi;
+        
+        // Si la détection est active et "ROI uniquement" coché, mettre à jour
+        if (SearchInRoiCheckBox.IsChecked == true)
+        {
+            _matcherOptions.RegionOfInterest = new Rectangle(roi.X, roi.Y, roi.Width, roi.Height);
+            RecreateMatcherWithCurrentOptions();
+        }
     }
 
     private void VisionView_ImageClicked(object? sender, System.Windows.Point e)
@@ -262,11 +272,13 @@ public partial class MainWindow : Window
             EnableElderSignCheckBox.IsEnabled = true;
             AutoContourButton.IsEnabled = true;
             BackgroundRemoverButton.IsEnabled = true;
+            ContourTracerButton.IsEnabled = true;
             
             var roiText = hasRoi ? $" (ROI {roiInfo.Width}x{roiInfo.Height})" : " (full frame)";
             ElderSignResultText.Text = $"🔯 Captured{roiText}! Enable detection to start.";
 
-            RoiModeCheckBox.IsChecked = false;
+            // Ne pas décocher le ROI mode, l'utilisateur peut vouloir le réutiliser pour la recherche
+            // RoiModeCheckBox.IsChecked = false;
             frame.Dispose();
         }
         catch (Exception ex)
@@ -297,6 +309,7 @@ public partial class MainWindow : Window
         SaveElderSignButton.IsEnabled = false;
         AutoContourButton.IsEnabled = false;
         BackgroundRemoverButton.IsEnabled = false;
+        ContourTracerButton.IsEnabled = false;
         ShowTemplateOverlayCheckBox.IsEnabled = false;
         
         ElderSignPreview.Visibility = Visibility.Collapsed;
@@ -322,9 +335,10 @@ public partial class MainWindow : Window
     {
         return _selectedMatcherType switch
         {
-            1 => new FeatureSignMatcher(FeatureDetectorType.ORB),
-            2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE),
-            _ => new TemplateSignMatcher()
+            1 => new FeatureSignMatcher(FeatureDetectorType.ORB, _matcherOptions),
+            2 => new FeatureSignMatcher(FeatureDetectorType.AKAZE, _matcherOptions),
+            3 => new ShapeSignMatcher(_matcherOptions),
+            _ => new TemplateSignMatcher(_matcherOptions)
         };
     }
 
@@ -464,6 +478,49 @@ public partial class MainWindow : Window
     #endregion
 
     #region ElderSign - Contour & Background Removal
+
+    private void ContourTracerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_elderSign == null) return;
+
+        try
+        {
+            var window = new ContourTracerWindow(_elderSign.Template) { Owner = this };
+
+            if (window.ShowDialog() == true && window.Applied)
+            {
+                // Appliquer le contour tracé
+                if (window.ResultContour is { Length: >= 3 })
+                {
+                    _elderSign.SetContour(window.ResultContour);
+                }
+                
+                if (window.ResultMask != null)
+                {
+                    _elderSign.SetMask(window.ResultMask);
+                }
+                
+                // Mettre à jour le processeur
+                _elderSignProcessor?.ClearElderSigns();
+                _elderSignProcessor?.AddElderSign(_elderSign);
+                
+                var contourInfo = _elderSign.ContourPoints != null 
+                    ? $"✏️ Contour tracé ! {_elderSign.ContourPoints.Length} points" 
+                    : "✏️ Contour tracé !";
+                ElderSignResultText.Text = contourInfo;
+                ElderSignResultText.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 100));
+                
+                // Désactiver les autres boutons de contour
+                AutoContourButton.IsEnabled = false;
+                BackgroundRemoverButton.IsEnabled = false;
+                ContourTracerButton.IsEnabled = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Contour tracer failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private void AutoContourButton_Click(object sender, RoutedEventArgs e)
     {
@@ -613,12 +670,14 @@ public partial class MainWindow : Window
             }
             
             ShowTemplateOverlayCheckBox.IsEnabled = true;
+            SearchInRoiCheckBox.IsEnabled = true;
             ElderSignResultText.Text = "🔍 Searching...";
         }
         else
         {
             _elderSignProcessor.IsEnabled = false;
             ShowTemplateOverlayCheckBox.IsEnabled = false;
+            SearchInRoiCheckBox.IsEnabled = false;
             ElderSignResultText.Text = "Detection disabled";
         }
     }
@@ -629,6 +688,64 @@ public partial class MainWindow : Window
         {
             _elderSignProcessor.DrawTemplateOverlay = ShowTemplateOverlayCheckBox.IsChecked == true;
         }
+    }
+
+    private void SearchInRoiCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        var useRoi = SearchInRoiCheckBox.IsChecked == true;
+        
+        if (useRoi)
+        {
+            // Vérifier si on a une ROI stockée ou actuellement sélectionnée
+            var roi = _searchRoi ?? VisionView.SelectedRoi;
+            
+            if (roi.HasValue)
+            {
+                _matcherOptions.RegionOfInterest = new Rectangle(roi.Value.X, roi.Value.Y, roi.Value.Width, roi.Value.Height);
+                ElderSignResultText.Text = $"🎯 ROI activée: {roi.Value.Width}x{roi.Value.Height}";
+                
+                // Activer le mode ROI pour voir le rectangle
+                VisionView.RoiSelectionEnabled = true;
+                RoiModeCheckBox.IsChecked = true;
+            }
+            else
+            {
+                ElderSignResultText.Text = "⚠️ Dessinez d'abord une ROI sur l'image !";
+                SearchInRoiCheckBox.IsChecked = false;
+                
+                // Activer le mode ROI pour que l'utilisateur puisse dessiner
+                VisionView.RoiSelectionEnabled = true;
+                RoiModeCheckBox.IsChecked = true;
+                return;
+            }
+        }
+        else
+        {
+            _matcherOptions.RegionOfInterest = null;
+            ElderSignResultText.Text = "🔍 Recherche sur toute l'image";
+        }
+        
+        RecreateMatcherWithCurrentOptions();
+    }
+
+    private void RecreateMatcherWithCurrentOptions()
+    {
+        if (_elderSign == null || _elderSignProcessor == null) return;
+        
+        var wasEnabled = _elderSignDetectionEnabled;
+        if (wasEnabled) EnableElderSignCheckBox.IsChecked = false;
+        
+        _pipeline?.Remove(_elderSignProcessor);
+        _elderSignProcessor.Dispose();
+        
+        var matcher = CreateMatcher();
+        _elderSignProcessor = new ElderSignProcessor(matcher);
+        _elderSignProcessor.AddElderSign(_elderSign);
+        _elderSignProcessor.DrawMatches = true;
+        _elderSignProcessor.ShowLabel = true;
+        _elderSignProcessor.IsEnabled = false;
+        
+        if (wasEnabled) EnableElderSignCheckBox.IsChecked = true;
     }
 
     private void MinScoreSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -665,7 +782,7 @@ public partial class MainWindow : Window
         
         if (wasEnabled) EnableElderSignCheckBox.IsChecked = true;
         
-        var matcherName = _selectedMatcherType switch { 1 => "ORB", 2 => "AKAZE", _ => "Template" };
+        var matcherName = _selectedMatcherType switch { 1 => "ORB", 2 => "AKAZE", 3 => "Shape", _ => "Template" };
         ElderSignResultText.Text = $"🔄 Matcher changed to {matcherName}";
     }
 
@@ -725,25 +842,32 @@ public partial class MainWindow : Window
     {
         if (_pipeline == null) return;
 
-        var grayscale = _pipeline.GetProcessor<GrayscaleProcessor>("Grayscale");
-        var blur = _pipeline.GetProcessor<GaussianBlurProcessor>("GaussianBlur");
-        var threshold = _pipeline.GetProcessor<ThresholdProcessor>("Threshold");
-        var canny = _pipeline.GetProcessor<CannyEdgeProcessor>("CannyEdge");
-        var contours = _pipeline.GetProcessor<ContourDetectorProcessor>("ContourDetector");
-        var houghCircles = _pipeline.GetProcessor<HoughCirclesProcessor>("HoughCircles");
-
-        if (grayscale != null) grayscale.IsEnabled = GrayscaleCheckBox.IsChecked == true;
-        if (blur != null) blur.IsEnabled = BlurCheckBox.IsChecked == true;
-        if (threshold != null) threshold.IsEnabled = ThresholdCheckBox.IsChecked == true;
-        if (canny != null) canny.IsEnabled = CannyCheckBox.IsChecked == true;
-        if (contours != null) contours.IsEnabled = ContoursCheckBox.IsChecked == true;
-        
-        if (houghCircles != null)
+        try
         {
-            houghCircles.IsEnabled = HoughCirclesCheckBox.IsChecked == true;
-            HoughCirclesSettings.Visibility = houghCircles.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+            var grayscale = _pipeline.GetProcessor<GrayscaleProcessor>("Grayscale");
+            var blur = _pipeline.GetProcessor<GaussianBlurProcessor>("GaussianBlur");
+            var threshold = _pipeline.GetProcessor<ThresholdProcessor>("Threshold");
+            var canny = _pipeline.GetProcessor<CannyEdgeProcessor>("CannyEdge");
+            var contours = _pipeline.GetProcessor<ContourDetectorProcessor>("ContourDetector");
+            var houghCircles = _pipeline.GetProcessor<HoughCirclesProcessor>("HoughCircles");
+
+            if (grayscale != null) grayscale.IsEnabled = GrayscaleCheckBox.IsChecked == true;
+            if (blur != null) blur.IsEnabled = BlurCheckBox.IsChecked == true;
+            if (threshold != null) threshold.IsEnabled = ThresholdCheckBox.IsChecked == true;
+            if (canny != null) canny.IsEnabled = CannyCheckBox.IsChecked == true;
+            if (contours != null) contours.IsEnabled = ContoursCheckBox.IsChecked == true;
             
-            if (houghCircles.IsEnabled) UpdateHoughCirclesSettings();
+            if (houghCircles != null)
+            {
+                houghCircles.IsEnabled = HoughCirclesCheckBox.IsChecked == true;
+                HoughCirclesSettings.Visibility = houghCircles.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+                
+                if (houghCircles.IsEnabled) UpdateHoughCirclesSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ProcessorCheckBox_Click] Error: {ex.Message}");
         }
     }
 

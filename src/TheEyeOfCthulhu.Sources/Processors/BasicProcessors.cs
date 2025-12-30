@@ -284,8 +284,9 @@ public sealed class ContourDetectorProcessor : FrameProcessorBase
         using var thresholded = new Mat();
         Cv2.Threshold(binary, thresholded, 127, 255, ThresholdTypes.Binary);
 
-        // Trouver les contours
-        Cv2.FindContours(thresholded, out var contours, out _, RetrievalMode, ApproximationMethod);
+        // Trouver les contours - on fait une copie pour éviter les problèmes de mémoire
+        using var contourInput = thresholded.Clone();
+        Cv2.FindContours(contourInput, out var contours, out _, RetrievalMode, ApproximationMethod);
 
         // Filtrer par aire
         var filteredContours = contours
@@ -337,9 +338,11 @@ public sealed class ContourDetectorProcessor : FrameProcessorBase
 
     private Frame CreateOutputFrame(Mat originalMat, Frame input, Point[][] contours, List<ContourInfo> contourData)
     {
-        if (!DrawContours)
+        if (!DrawContours || contours.Length == 0)
         {
-            return FrameMatConverter.ToFrame(originalMat, input.FrameNumber);
+            // Retourner une copie pour éviter les problèmes de mémoire
+            using var copy = originalMat.Clone();
+            return FrameMatConverter.ToFrame(copy, input.FrameNumber);
         }
 
         // Convertir en couleur si nécessaire pour dessiner

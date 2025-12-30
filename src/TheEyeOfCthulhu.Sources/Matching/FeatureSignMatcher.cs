@@ -58,9 +58,12 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
     /// </summary>
     public int MaxFeatures { get; set; } = 500;
 
-    public FeatureSignMatcher(FeatureDetectorType detectorType = FeatureDetectorType.ORB)
+    private readonly MatcherOptions _options;
+
+    public FeatureSignMatcher(FeatureDetectorType detectorType = FeatureDetectorType.ORB, MatcherOptions? options = null)
     {
         _detectorType = detectorType;
+        _options = options ?? MatcherOptions.Default;
         
         _detector = detectorType switch
         {
@@ -91,79 +94,109 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
 
             // Convertir la frame en Mat grayscale
             using var sceneMat = FrameMatConverter.ToMat(frame);
-            using var sceneGray = sceneMat.Channels() == 1 
-                ? sceneMat.Clone() 
-                : sceneMat.CvtColor(ColorConversionCodes.BGR2GRAY);
-
-            // Détecter les features dans la scène
-            using var sceneKeypoints = new Mat();
-            using var sceneDescriptors = new Mat();
-            KeyPoint[] sceneKps;
             
-            _detector.DetectAndCompute(sceneGray, null, out sceneKps, sceneDescriptors);
-
-            if (sceneKps.Length < MinGoodMatches || sceneDescriptors.Empty())
+            // Appliquer ROI si définie
+            Mat searchArea;
+            bool usingRoi = false;
+            int roiOffsetX = 0, roiOffsetY = 0;
+            
+            if (_options.RegionOfInterest.HasValue)
             {
-                return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
+                var roi = _options.RegionOfInterest.Value;
+                roiOffsetX = roi.X;
+                roiOffsetY = roi.Y;
+                searchArea = new Mat(sceneMat, new Rect(roi.X, roi.Y, roi.Width, roi.Height));
+                usingRoi = true;
+                Debug.WriteLine($"[FeatureSignMatcher] Searching in ROI: {roi.X},{roi.Y} {roi.Width}x{roi.Height}");
             }
-
-            // Matcher les descripteurs (KNN avec k=2 pour ratio test)
-            var knnMatches = _matcher.KnnMatch(template.Descriptors, sceneDescriptors, k: 2);
-
-            // Appliquer le ratio test de Lowe
-            var goodMatches = new List<DMatch>();
-            foreach (var knnMatch in knnMatches)
+            else
             {
-                if (knnMatch.Length >= 2 && knnMatch[0].Distance < LoweRatioThreshold * knnMatch[1].Distance)
+                searchArea = sceneMat;
+            }
+            
+            try
+            {
+                using var sceneGray = searchArea.Channels() == 1 
+                    ? searchArea.Clone() 
+                    : searchArea.CvtColor(ColorConversionCodes.BGR2GRAY);
+
+                // Détecter les features dans la scène
+                using var sceneKeypoints = new Mat();
+                using var sceneDescriptors = new Mat();
+                KeyPoint[] sceneKps;
+                
+                _detector.DetectAndCompute(sceneGray, null, out sceneKps, sceneDescriptors);
+
+                if (sceneKps.Length < MinGoodMatches || sceneDescriptors.Empty())
                 {
-                    goodMatches.Add(knnMatch[0]);
+                    return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
+                }
+
+                // Matcher les descripteurs (KNN avec k=2 pour ratio test)
+                var knnMatches = _matcher.KnnMatch(template.Descriptors, sceneDescriptors, k: 2);
+
+                // Appliquer le ratio test de Lowe
+                var goodMatches = new List<DMatch>();
+                foreach (var knnMatch in knnMatches)
+                {
+                    if (knnMatch.Length >= 2 && knnMatch[0].Distance < LoweRatioThreshold * knnMatch[1].Distance)
+                    {
+                        goodMatches.Add(knnMatch[0]);
+                    }
+                }
+
+                if (goodMatches.Count < MinGoodMatches)
+                {
+                    return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
+                }
+
+                // Extraire les points correspondants
+                var templatePoints = goodMatches
+                    .Select(m => template.Keypoints[m.QueryIdx].Pt)
+                    .ToArray();
+                var scenePoints = goodMatches
+                    .Select(m => sceneKps[m.TrainIdx].Pt)
+                    .ToArray();
+
+                // Calculer l'homographie avec RANSAC
+                using var homography = Cv2.FindHomography(
+                    InputArray.Create(templatePoints),
+                    InputArray.Create(scenePoints),
+                    HomographyMethods.Ransac,
+                    RansacThreshold);
+
+                if (homography.Empty())
+                {
+                    return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
+                }
+
+                // Calculer la position, rotation et scale à partir de l'homographie
+                var result = ExtractTransformFromHomography(homography, elderSign, template, roiOffsetX, roiOffsetY);
+                
+                if (result == null)
+                {
+                    return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
+                }
+
+                // Calculer un score basé sur le nombre de inliers
+                var score = Math.Min(1.0, (double)goodMatches.Count / (MinGoodMatches * 3));
+
+                var match = new ElderSignMatch(elderSign, result.Value.Position, score)
+                {
+                    Angle = result.Value.Angle,
+                    Scale = result.Value.Scale,
+                    TransformedCorners = result.Value.Corners
+                };
+
+                return new ElderSignSearchResult(new[] { match }, sw.ElapsedMilliseconds);
+            }
+            finally
+            {
+                if (usingRoi)
+                {
+                    searchArea.Dispose();
                 }
             }
-
-            if (goodMatches.Count < MinGoodMatches)
-            {
-                return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
-            }
-
-            // Extraire les points correspondants
-            var templatePoints = goodMatches
-                .Select(m => template.Keypoints[m.QueryIdx].Pt)
-                .ToArray();
-            var scenePoints = goodMatches
-                .Select(m => sceneKps[m.TrainIdx].Pt)
-                .ToArray();
-
-            // Calculer l'homographie avec RANSAC
-            using var homography = Cv2.FindHomography(
-                InputArray.Create(templatePoints),
-                InputArray.Create(scenePoints),
-                HomographyMethods.Ransac,
-                RansacThreshold);
-
-            if (homography.Empty())
-            {
-                return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
-            }
-
-            // Calculer la position, rotation et scale à partir de l'homographie
-            var result = ExtractTransformFromHomography(homography, elderSign, template);
-            
-            if (result == null)
-            {
-                return ElderSignSearchResult.Empty(sw.ElapsedMilliseconds);
-            }
-
-            // Calculer un score basé sur le nombre de inliers
-            var score = Math.Min(1.0, (double)goodMatches.Count / (MinGoodMatches * 3));
-
-            var match = new ElderSignMatch(elderSign, result.Value.Position, score)
-            {
-                Angle = result.Value.Angle,
-                Scale = result.Value.Scale,
-                TransformedCorners = result.Value.Corners
-            };
-
-            return new ElderSignSearchResult(new[] { match }, sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
@@ -232,7 +265,7 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
     }
 
     private (PointF Position, double Angle, double Scale, PointF[] Corners)? ExtractTransformFromHomography(
-        Mat homography, ElderSign elderSign, CachedTemplate template)
+        Mat homography, ElderSign elderSign, CachedTemplate template, int offsetX = 0, int offsetY = 0)
     {
         if (homography.Empty() || homography.Rows != 3 || homography.Cols != 3)
             return null;
@@ -256,8 +289,8 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
         if (!IsValidQuadrilateral(transformedCorners))
             return null;
 
-        // Position = coin supérieur gauche transformé
-        var position = new PointF(transformedCorners[0].X, transformedCorners[0].Y);
+        // Position = coin supérieur gauche transformé + offset ROI
+        var position = new PointF(transformedCorners[0].X + offsetX, transformedCorners[0].Y + offsetY);
 
         // Calculer l'angle (direction du bord supérieur)
         var dx = transformedCorners[1].X - transformedCorners[0].X;
@@ -268,9 +301,9 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
         var topEdgeLength = Math.Sqrt(dx * dx + dy * dy);
         var scale = topEdgeLength / template.Width;
 
-        // Convertir les coins en PointF Core
+        // Convertir les coins en PointF Core (avec offset ROI)
         var coreCorners = transformedCorners
-            .Select(c => new PointF(c.X, c.Y))
+            .Select(c => new PointF(c.X + offsetX, c.Y + offsetY))
             .ToArray();
 
         return (position, angle, scale, coreCorners);
