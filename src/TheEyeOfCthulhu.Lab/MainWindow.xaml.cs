@@ -7,6 +7,9 @@ using OpenCvSharp;
 using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Matching;
 using TheEyeOfCthulhu.Core.Processing;
+using TheEyeOfCthulhu.Core.Runes;
+using TheEyeOfCthulhu.Core.Runes.Implementations;
+using TheEyeOfCthulhu.Core.Rituals;
 using TheEyeOfCthulhu.Sources.DroidCam;
 using TheEyeOfCthulhu.Sources.Matching;
 using TheEyeOfCthulhu.Sources.Processors;
@@ -15,6 +18,9 @@ using TheEyeOfCthulhu.Sources.Webcam;
 
 using CoreFrame = TheEyeOfCthulhu.Core.Frame;
 using CorePixelFormat = TheEyeOfCthulhu.Core.PixelFormat;
+using CorePoint = TheEyeOfCthulhu.Core.Point;
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
+using CoreRectangle = TheEyeOfCthulhu.Core.Rectangle;
 
 namespace TheEyeOfCthulhu.Lab;
 
@@ -236,7 +242,7 @@ public partial class MainWindow : System.Windows.Window
         // Si la détection est active et "ROI uniquement" coché, mettre à jour
         if (SearchInRoiCheckBox.IsChecked == true)
         {
-            _matcherOptions.RegionOfInterest = new Rectangle(roi.X, roi.Y, roi.Width, roi.Height);
+            _matcherOptions.RegionOfInterest = new CoreRectangle(roi.X, roi.Y, roi.Width, roi.Height);
             RecreateMatcherWithCurrentOptions();
         }
     }
@@ -273,6 +279,7 @@ public partial class MainWindow : System.Windows.Window
             AutoContourButton.IsEnabled = true;
             BackgroundRemoverButton.IsEnabled = true;
             ContourTracerButton.IsEnabled = true;
+            TestRitualButton.IsEnabled = true;
             
             var roiText = hasRoi ? $" (ROI {roiInfo.Width}x{roiInfo.Height})" : " (full frame)";
             ElderSignResultText.Text = $"🔯 Captured{roiText}! Enable detection to start.";
@@ -311,6 +318,7 @@ public partial class MainWindow : System.Windows.Window
         BackgroundRemoverButton.IsEnabled = false;
         ContourTracerButton.IsEnabled = false;
         ShowTemplateOverlayCheckBox.IsEnabled = false;
+        TestRitualButton.IsEnabled = false;
         
         ElderSignPreview.Visibility = Visibility.Collapsed;
         ElderSignImage.Source = null;
@@ -424,6 +432,7 @@ public partial class MainWindow : System.Windows.Window
             ClearElderSignButton.IsEnabled = true;
             SaveElderSignButton.IsEnabled = true;
             EnableElderSignCheckBox.IsEnabled = true;
+            TestRitualButton.IsEnabled = true;
             
             ElderSignResultText.Text = $"📂 Loaded '{name}' ({_elderSign.Width}x{_elderSign.Height})";
         }
@@ -464,6 +473,7 @@ public partial class MainWindow : System.Windows.Window
             ClearElderSignButton.IsEnabled = true;
             SaveElderSignButton.IsEnabled = true;
             EnableElderSignCheckBox.IsEnabled = true;
+            TestRitualButton.IsEnabled = true;
             
             var contourInfo = _elderSign.ContourPoints != null ? $" with {_elderSign.ContourPoints.Length} contour points" : "";
             ElderSignResultText.Text = $"🖼️ Imported '{name}' ({_elderSign.Width}x{_elderSign.Height}){contourInfo}";
@@ -701,7 +711,7 @@ public partial class MainWindow : System.Windows.Window
             
             if (roi.HasValue)
             {
-                _matcherOptions.RegionOfInterest = new Rectangle(roi.Value.X, roi.Value.Y, roi.Value.Width, roi.Value.Height);
+                _matcherOptions.RegionOfInterest = new CoreRectangle(roi.Value.X, roi.Value.Y, roi.Value.Width, roi.Value.Height);
                 ElderSignResultText.Text = $"🎯 ROI activée: {roi.Value.Width}x{roi.Value.Height}";
                 
                 // Activer le mode ROI pour voir le rectangle
@@ -957,6 +967,201 @@ public partial class MainWindow : System.Windows.Window
             ElderSignResultText.Text = "❌ Not found";
             ElderSignResultText.Foreground = new SolidColorBrush(Color.FromRgb(197, 134, 192));
         }
+    }
+
+    #endregion
+
+    #region Ritual Test
+
+    private void TestRitualButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_elderSign == null)
+        {
+            RitualResultText.Text = "❌ Pas d'ElderSign chargé";
+            return;
+        }
+
+        var frame = VisionView.CaptureOriginalFrame();
+        if (frame == null)
+        {
+            RitualResultText.Text = "❌ Pas de frame disponible";
+            return;
+        }
+
+        try
+        {
+            RitualResultText.Text = "🔮 Exécution du Ritual...";
+            
+            // Créer un Ritual de test
+            var ritual = new Ritual("TestRitual")
+            {
+                Strategy = ProphecyStrategy.AllMustAwaken,
+                StopOnFirstDormant = true
+            };
+            
+            // Créer le matcher pour les Runes
+            var matcherFactory = new MatcherFactory();
+            var matcher1 = matcherFactory.Create(ElderSignMatcherType.ORB);
+            var matcher2 = matcherFactory.Create(ElderSignMatcherType.ORB);
+            
+            // Ajouter une SummonRune pour localiser l'ElderSign
+            var summonRune = new SummonRune(
+                "Summon_" + _elderSign.Name,
+                _elderSign,
+                ElderSignMatcherType.AKAZE)
+            {
+                ResonanceThreshold = MinScoreSlider.Value
+            };
+            summonRune.SetMatcher(matcher1);
+            ritual.AddRune(summonRune);
+            
+            // Ajouter une PresenceRune pour vérifier la présence
+            var presenceRune = new PresenceRune(
+                "Presence_" + _elderSign.Name,
+                _elderSign,
+                PresenceMode.MustBePresent)
+            {
+                ResonanceThreshold = MinScoreSlider.Value
+            };
+            presenceRune.SetMatcher(matcher2);
+            ritual.AddRune(presenceRune);
+            
+            // Exécuter le Ritual
+            var prophecy = ritual.Execute(frame);
+            
+            // Afficher les résultats texte
+            DisplayProphecyResults(prophecy);
+            
+            // Afficher les résultats visuels
+            ShowProphecyVisual(frame, prophecy);
+            
+            // Cleanup
+            ritual.Dispose();
+            frame.Dispose();
+        }
+        catch (Exception ex)
+        {
+            RitualResultText.Text = $"❌ Erreur: {ex.Message}";
+            RitualResultText.Foreground = new SolidColorBrush(Color.FromRgb(255, 100, 100));
+            frame.Dispose();
+        }
+    }
+
+    private void ShowProphecyVisual(CoreFrame frame, Prophecy prophecy)
+    {
+        // Convertir frame en Mat
+        using var mat = FrameMatConverter.ToMat(frame);
+        
+        // Couleurs selon l'état
+        var awakenedColor = new Scalar(0, 255, 0);   // Vert
+        var dormantColor = new Scalar(0, 0, 255);    // Rouge
+        var textColor = new Scalar(255, 255, 255);   // Blanc
+        
+        int yOffset = 30;
+        
+        // Titre
+        var globalColor = prophecy.IsAwakened ? awakenedColor : dormantColor;
+        var stateText = prophecy.IsAwakened ? "AWAKENED" : "DORMANT";
+        Cv2.PutText(mat, $"Prophecy: {stateText}", new OpenCvSharp.Point(10, yOffset), 
+            HersheyFonts.HersheySimplex, 0.8, globalColor, 2);
+        yOffset += 30;
+        
+        Cv2.PutText(mat, $"Time: {prophecy.TotalExecutionTimeMs:F1}ms | Resonance: {prophecy.GlobalResonance:P0}", 
+            new OpenCvSharp.Point(10, yOffset), HersheyFonts.HersheySimplex, 0.5, textColor, 1);
+        yOffset += 25;
+        
+        // Dessiner chaque Vision
+        foreach (var vision in prophecy.Visions)
+        {
+            var color = vision.State == VisionState.Awakened ? awakenedColor : dormantColor;
+            var symbol = vision.State == VisionState.Awakened ? "[OK]" : "[X]";
+            
+            // Texte de la rune
+            var runeText = $"{symbol} {vision.RuneName}: {vision.Resonance:P0}";
+            Cv2.PutText(mat, runeText, new OpenCvSharp.Point(10, yOffset), 
+                HersheyFonts.HersheySimplex, 0.5, color, 1);
+            yOffset += 22;
+            
+            // Si on a une position, dessiner un rectangle/croix
+            if (vision.Position.HasValue && _elderSign != null)
+            {
+                var pos = vision.Position.Value;
+                var halfW = _elderSign.Width / 2;
+                var halfH = _elderSign.Height / 2;
+                
+                var rect = new OpenCvSharp.Rect(
+                    (int)(pos.X - halfW), 
+                    (int)(pos.Y - halfH), 
+                    _elderSign.Width, 
+                    _elderSign.Height);
+                
+                // Rectangle autour de l'objet détecté
+                Cv2.Rectangle(mat, rect, color, 2);
+                
+                // Croix au centre
+                var center = new OpenCvSharp.Point((int)pos.X, (int)pos.Y);
+                Cv2.DrawMarker(mat, center, color, MarkerTypes.Cross, 20, 2);
+                
+                // Label avec score
+                var label = $"{vision.Resonance:P0}";
+                Cv2.PutText(mat, label, new OpenCvSharp.Point(rect.X, rect.Y - 5), 
+                    HersheyFonts.HersheySimplex, 0.6, color, 2);
+            }
+        }
+        
+        // Afficher dans une fenêtre OpenCV
+        const string windowName = "Prophecy Result";
+        Cv2.NamedWindow(windowName, WindowFlags.Normal);
+        Cv2.ImShow(windowName, mat);
+        
+        // Note: La fenêtre reste ouverte, l'utilisateur peut la fermer manuellement
+        // ou elle se fermera au prochain test
+    }
+
+    private void DisplayProphecyResults(Prophecy prophecy)
+    {
+        var stateEmoji = prophecy.State switch
+        {
+            VisionState.Awakened => "✅",
+            VisionState.Dormant => "❌",
+            VisionState.Uncertain => "⚠️",
+            _ => "💀"
+        };
+        
+        var stateColor = prophecy.State switch
+        {
+            VisionState.Awakened => Color.FromRgb(0, 255, 100),
+            VisionState.Dormant => Color.FromRgb(255, 100, 100),
+            VisionState.Uncertain => Color.FromRgb(255, 200, 0),
+            _ => Color.FromRgb(150, 150, 150)
+        };
+        
+        var result = $"{stateEmoji} {prophecy.State}\n";
+        result += $"⏱️ {prophecy.TotalExecutionTimeMs:F1}ms\n";
+        result += $"📊 Résonance: {prophecy.GlobalResonance:P0}\n";
+        result += $"---\n";
+        
+        foreach (var vision in prophecy.Visions)
+        {
+            var runeEmoji = vision.State switch
+            {
+                VisionState.Awakened => "✓",
+                VisionState.Dormant => "✗",
+                _ => "?"
+            };
+            
+            result += $"{runeEmoji} {vision.RuneName}: {vision.Resonance:P0}";
+            
+            if (vision.Position.HasValue)
+            {
+                result += $" @ ({vision.Position.Value.X:F0}, {vision.Position.Value.Y:F0})";
+            }
+            
+            result += "\n";
+        }
+        
+        RitualResultText.Text = result;
+        RitualResultText.Foreground = new SolidColorBrush(stateColor);
     }
 
     #endregion

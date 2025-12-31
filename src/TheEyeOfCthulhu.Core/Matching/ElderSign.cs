@@ -1,3 +1,5 @@
+using TheEyeOfCthulhu.Core;
+
 namespace TheEyeOfCthulhu.Core.Matching;
 
 /// <summary>
@@ -126,47 +128,4 @@ public class ElderSign : IDisposable
         Mask?.Dispose();
         GC.SuppressFinalize(this);
     }
-}
-
-/// <summary>
-/// Point 2D simple (pour éviter dépendance à System.Drawing ou OpenCV dans Core).
-/// </summary>
-public readonly struct Point
-{
-    public int X { get; }
-    public int Y { get; }
-
-    public Point(int x, int y)
-    {
-        X = x;
-        Y = y;
-    }
-
-    public static Point Zero => new(0, 0);
-
-    public override string ToString() => $"({X}, {Y})";
-
-    public static Point operator +(Point a, Point b) => new(a.X + b.X, a.Y + b.Y);
-    public static Point operator -(Point a, Point b) => new(a.X - b.X, a.Y - b.Y);
-}
-
-/// <summary>
-/// Point 2D en double précision.
-/// </summary>
-public readonly struct PointF
-{
-    public double X { get; }
-    public double Y { get; }
-
-    public PointF(double x, double y)
-    {
-        X = x;
-        Y = y;
-    }
-
-    public static PointF Zero => new(0, 0);
-
-    public override string ToString() => $"({X:F2}, {Y:F2})";
-
-    public Point ToPoint() => new((int)X, (int)Y);
 }

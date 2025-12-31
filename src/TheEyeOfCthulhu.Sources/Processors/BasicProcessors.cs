@@ -2,6 +2,8 @@ using OpenCvSharp;
 using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Processing;
 using PixelFormat = TheEyeOfCthulhu.Core.PixelFormat;
+using CvPoint = OpenCvSharp.Point;
+using CvSize = OpenCvSharp.Size;
 
 namespace TheEyeOfCthulhu.Sources.Processors;
 
@@ -73,7 +75,7 @@ public sealed class GaussianBlurProcessor : FrameProcessorBase
         using var mat = FrameMatConverter.ToMat(input);
         using var blurred = new Mat();
 
-        Cv2.GaussianBlur(mat, blurred, new Size(_kernelSize, _kernelSize), SigmaX);
+        Cv2.GaussianBlur(mat, blurred, new CvSize(_kernelSize, _kernelSize), SigmaX);
 
         return (FrameMatConverter.ToFrame(blurred, input.FrameNumber), null);
     }
@@ -308,7 +310,7 @@ public sealed class ContourDetectorProcessor : FrameProcessorBase
         return (result, metadata);
     }
 
-    private List<ContourInfo> ExtractContourData(Point[][] contours)
+    private List<ContourInfo> ExtractContourData(CvPoint[][] contours)
     {
         var result = new List<ContourInfo>(contours.Length);
 
@@ -336,7 +338,7 @@ public sealed class ContourDetectorProcessor : FrameProcessorBase
         return result;
     }
 
-    private Frame CreateOutputFrame(Mat originalMat, Frame input, Point[][] contours, List<ContourInfo> contourData)
+    private Frame CreateOutputFrame(Mat originalMat, Frame input, CvPoint[][] contours, List<ContourInfo> contourData)
     {
         if (!DrawContours || contours.Length == 0)
         {
@@ -356,7 +358,7 @@ public sealed class ContourDetectorProcessor : FrameProcessorBase
         // Dessiner les centroïdes
         foreach (var data in contourData)
         {
-            var center = new Point((int)data.CentroidX, (int)data.CentroidY);
+            var center = new CvPoint((int)data.CentroidX, (int)data.CentroidY);
             Cv2.Circle(output, center, 5, CentroidColor, -1);
         }
 

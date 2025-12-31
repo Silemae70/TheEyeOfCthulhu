@@ -4,6 +4,7 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Matching;
 using TheEyeOfCthulhu.Sources.Processors;
 using CvPoint = OpenCvSharp.Point;
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
 
 namespace TheEyeOfCthulhu.Sources.Matching;
 
@@ -54,7 +55,7 @@ public class TemplateSignMatcher : IElderSignMatcher
                 var roi = _options.RegionOfInterest.Value;
                 match = new ElderSignMatch(
                     match.ElderSign,
-                    new PointF(match.Position.X + roi.X, match.Position.Y + roi.Y),
+                    new CorePointF(match.Position.X + roi.X, match.Position.Y + roi.Y),
                     match.Score);
             }
 
@@ -126,7 +127,7 @@ public class TemplateSignMatcher : IElderSignMatcher
         }
 
         Log($"Match '{elderSign.Name}': score {score:P1} at ({location.X}, {location.Y})");
-        return new ElderSignMatch(elderSign, new PointF(location.X, location.Y), score);
+        return new ElderSignMatch(elderSign, new CorePointF(location.X, location.Y), score);
     }
 
     private List<ElderSignMatch> PerformMultiMatch(Mat image, Mat template, ElderSign elderSign, int maxMatches)
@@ -160,7 +161,7 @@ public class TemplateSignMatcher : IElderSignMatcher
                 break;
             }
 
-            matches.Add(new ElderSignMatch(elderSign, new PointF(location.X, location.Y), score));
+            matches.Add(new ElderSignMatch(elderSign, new CorePointF(location.X, location.Y), score));
 
             // Supprimer cette zone pour trouver le prochain match (Non-Maximum Suppression)
             Cv2.Circle(mask, location, suppressionRadius, Scalar.All(0), -1);
@@ -186,7 +187,7 @@ public class TemplateSignMatcher : IElderSignMatcher
         return method == TemplateMatchModes.SqDiff || method == TemplateMatchModes.SqDiffNormed;
     }
 
-    private static Rect ToRect(Core.Matching.Rectangle r)
+    private static Rect ToRect(Rectangle r)
     {
         return new Rect(r.X, r.Y, r.Width, r.Height);
     }

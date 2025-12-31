@@ -7,6 +7,8 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Processing;
 using CoreFrame = TheEyeOfCthulhu.Core.Frame;
 using CorePixelFormat = TheEyeOfCthulhu.Core.PixelFormat;
+using WpfPoint = System.Windows.Point;
+using WpfSize = System.Windows.Size;
 
 namespace TheEyeOfCthulhu.WPF.Controls;
 
@@ -27,7 +29,7 @@ public partial class VisionView : UserControl
     // ROI Selection
     private bool _isSelectingRoi;
     private bool _roiSelectionEnabled;
-    private Point _roiStartPoint;
+    private WpfPoint _roiStartPoint;
     private Int32Rect? _selectedRoi;
 
     // Zoom & Pan
@@ -36,8 +38,8 @@ public partial class VisionView : UserControl
     private const double ZoomMax = 10.0;
     private const double ZoomStep = 0.15;
     private bool _isPanning;
-    private Point _panStartPoint;
-    private Point _panStartOffset;
+    private WpfPoint _panStartPoint;
+    private WpfPoint _panStartOffset;
 
     #region Dependency Properties
 
@@ -85,7 +87,7 @@ public partial class VisionView : UserControl
 
     public event EventHandler<CoreFrame>? FrameDisplayed;
     public event EventHandler<PipelineResult>? FrameProcessed;
-    public event EventHandler<Point>? ImageClicked;
+    public event EventHandler<WpfPoint>? ImageClicked;
     public event EventHandler<Int32Rect>? RoiSelected;
 
     #endregion
@@ -319,7 +321,7 @@ public partial class VisionView : UserControl
 
             _isPanning = true;
             _panStartPoint = e.GetPosition(RootGrid);
-            _panStartOffset = new Point(PanTransform.X, PanTransform.Y);
+            _panStartOffset = new WpfPoint(PanTransform.X, PanTransform.Y);
             RootGrid.CaptureMouse();
             UpdateCursor();
             e.Handled = true;
@@ -471,15 +473,15 @@ public partial class VisionView : UserControl
         }
     }
 
-    private Point ScreenToImagePoint(Point screenPoint, CoreFrame referenceFrame)
+    private WpfPoint ScreenToImagePoint(WpfPoint screenPoint, CoreFrame referenceFrame)
     {
         var imageRect = GetImageDisplayRect(referenceFrame);
-        if (imageRect.Width <= 0 || imageRect.Height <= 0) return new Point(0, 0);
+        if (imageRect.Width <= 0 || imageRect.Height <= 0) return new WpfPoint(0, 0);
 
         var imageX = (screenPoint.X - imageRect.X) * referenceFrame.Width / imageRect.Width;
         var imageY = (screenPoint.Y - imageRect.Y) * referenceFrame.Height / imageRect.Height;
 
-        return new Point(
+        return new WpfPoint(
             Math.Clamp(imageX, 0, referenceFrame.Width),
             Math.Clamp(imageY, 0, referenceFrame.Height));
     }

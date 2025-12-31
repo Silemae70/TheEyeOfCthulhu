@@ -3,6 +3,8 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Matching;
 using TheEyeOfCthulhu.Sources.Processors;
 
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
+
 namespace TheEyeOfCthulhu.Sources.Matching;
 
 /// <summary>
@@ -106,7 +108,7 @@ public static class ElderSignFactory
     /// <summary>
     /// Crée un ElderSign à partir d'une Frame et de points de contour manuels.
     /// </summary>
-    public static ElderSign FromFrameWithContour(string name, Frame frame, PointF[] contourPoints)
+    public static ElderSign FromFrameWithContour(string name, Frame frame, CorePointF[] contourPoints)
     {
         var elderSign = new ElderSign(name, frame);
         elderSign.SetContour(contourPoints);
@@ -128,7 +130,7 @@ public static class ElderSignFactory
     /// <summary>
     /// Extrait le contour principal d'un masque binaire.
     /// </summary>
-    private static PointF[]? ExtractContour(Mat binary)
+    private static CorePointF[]? ExtractContour(Mat binary)
     {
         Cv2.FindContours(binary, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
@@ -148,7 +150,7 @@ public static class ElderSignFactory
         var simplified = Cv2.ApproxPolyDP(largestContour, epsilon, true);
 
         return simplified
-            .Select(p => new PointF(p.X, p.Y))
+            .Select(p => new CorePointF(p.X, p.Y))
             .ToArray();
     }
 

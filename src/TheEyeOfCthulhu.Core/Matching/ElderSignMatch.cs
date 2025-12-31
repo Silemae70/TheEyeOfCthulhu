@@ -1,3 +1,5 @@
+using TheEyeOfCthulhu.Core;
+
 namespace TheEyeOfCthulhu.Core.Matching;
 
 /// <summary>
@@ -19,8 +21,8 @@ public class ElderSignMatch
     /// Position du point d'ancrage dans l'image.
     /// </summary>
     public PointF AnchorPosition => new(
-        Position.X + ElderSign.Anchor.X * Scale,
-        Position.Y + ElderSign.Anchor.Y * Scale);
+        Position.X + ElderSign.Anchor.X * (float)Scale,
+        Position.Y + ElderSign.Anchor.Y * (float)Scale);
 
     /// <summary>
     /// Score de confiance (0.0 - 1.0).
@@ -122,38 +124,4 @@ public class ElderSignSearchResult
 
     public static ElderSignSearchResult Empty(double searchTimeMs = 0) =>
         new(Enumerable.Empty<ElderSignMatch>(), searchTimeMs);
-}
-
-/// <summary>
-/// Rectangle simple.
-/// </summary>
-public readonly struct Rectangle
-{
-    public int X { get; }
-    public int Y { get; }
-    public int Width { get; }
-    public int Height { get; }
-
-    public int Left => X;
-    public int Top => Y;
-    public int Right => X + Width;
-    public int Bottom => Y + Height;
-
-    public Point Center => new(X + Width / 2, Y + Height / 2);
-
-    public Rectangle(int x, int y, int width, int height)
-    {
-        X = x;
-        Y = y;
-        Width = width;
-        Height = height;
-    }
-
-    public bool Contains(Point p) =>
-        p.X >= X && p.X < Right && p.Y >= Y && p.Y < Bottom;
-
-    public bool Contains(PointF p) =>
-        p.X >= X && p.X < Right && p.Y >= Y && p.Y < Bottom;
-
-    public override string ToString() => $"[{X}, {Y}, {Width}x{Height}]";
 }

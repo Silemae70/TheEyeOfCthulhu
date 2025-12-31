@@ -2,6 +2,7 @@ using OpenCvSharp;
 using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Sources.Processors;
 using PixelFormat = TheEyeOfCthulhu.Core.PixelFormat;
+using CvPoint = OpenCvSharp.Point;
 
 namespace TheEyeOfCthulhu.Sources.Utilities;
 
@@ -48,7 +49,7 @@ public static class FrameViewer
         using var mat = FrameToMat(frame);
 
         var info = $"Frame #{frame.FrameNumber} | {frame.Width}x{frame.Height} | {fps:F1} FPS";
-        Cv2.PutText(mat, info, new Point(10, 30), HersheyFonts.HersheySimplex, 0.7, Scalar.LimeGreen, 2);
+        Cv2.PutText(mat, info, new CvPoint(10, 30), HersheyFonts.HersheySimplex, 0.7, Scalar.LimeGreen, 2);
 
         Cv2.ImShow(windowName, mat);
     }

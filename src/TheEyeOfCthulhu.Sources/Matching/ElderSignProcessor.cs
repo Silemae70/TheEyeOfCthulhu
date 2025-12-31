@@ -4,6 +4,8 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Matching;
 using TheEyeOfCthulhu.Core.Processing;
 using TheEyeOfCthulhu.Sources.Processors;
+using CvPoint = OpenCvSharp.Point;
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
 
 namespace TheEyeOfCthulhu.Sources.Matching;
 
@@ -311,8 +313,8 @@ public class ElderSignProcessor : FrameProcessorBase
     /// <summary>
     /// Dessine le contour de l'objet transformé selon la détection.
     /// </summary>
-    private void DrawTransformedContour(Mat mat, Core.Matching.PointF[] contourPoints, 
-        Core.Matching.PointF[] transformedCorners, int templateWidth, int templateHeight, Scalar color)
+    private void DrawTransformedContour(Mat mat, CorePointF[] contourPoints, 
+        CorePointF[] transformedCorners, int templateWidth, int templateHeight, Scalar color)
     {
         try
         {
@@ -440,7 +442,7 @@ public class ElderSignProcessor : FrameProcessorBase
         }
     }
 
-    private void DrawQuadrilateral(Mat mat, Core.Matching.PointF[] corners, Scalar color)
+    private void DrawQuadrilateral(Mat mat, CorePointF[] corners, Scalar color)
     {
         // Dessiner les 4 côtés du quadrilatère
         for (int i = 0; i < 4; i++)

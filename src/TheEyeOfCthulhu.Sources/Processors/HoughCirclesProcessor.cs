@@ -1,6 +1,8 @@
 using OpenCvSharp;
 using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Processing;
+using CvPoint = OpenCvSharp.Point;
+using CvSize = OpenCvSharp.Size;
 
 namespace TheEyeOfCthulhu.Sources.Processors;
 
@@ -94,7 +96,7 @@ public class HoughCirclesProcessor : FrameProcessorBase
 
         // Appliquer un blur pour réduire le bruit
         using var blurred = ApplyBlur 
-            ? gray.GaussianBlur(new Size(BlurSize, BlurSize), 0) 
+            ? gray.GaussianBlur(new CvSize(BlurSize, BlurSize), 0) 
             : gray.Clone();
 
         // Détecter les cercles
@@ -155,7 +157,7 @@ public class HoughCirclesProcessor : FrameProcessorBase
 
         foreach (var circle in detectedCircles)
         {
-            var center = new Point((int)circle.Center.X, (int)circle.Center.Y);
+            var center = new CvPoint((int)circle.Center.X, (int)circle.Center.Y);
             var radius = (int)circle.Radius;
 
             // Dessiner le cercle
@@ -168,13 +170,13 @@ public class HoughCirclesProcessor : FrameProcessorBase
             if (ShowInfo)
             {
                 var info = $"R:{radius} D:{radius * 2}";
-                var textPos = new Point(center.X - 40, center.Y - radius - 10);
+                var textPos = new CvPoint(center.X - 40, center.Y - radius - 10);
                 
                 // Fond pour lisibilité
                 var textSize = Cv2.GetTextSize(info, HersheyFonts.HersheySimplex, 0.5, 1, out _);
                 Cv2.Rectangle(colorMat,
-                    new Point(textPos.X - 2, textPos.Y - textSize.Height - 2),
-                    new Point(textPos.X + textSize.Width + 2, textPos.Y + 4),
+                    new CvPoint(textPos.X - 2, textPos.Y - textSize.Height - 2),
+                    new CvPoint(textPos.X + textSize.Width + 2, textPos.Y + 4),
                     Scalar.Black, -1);
                 
                 Cv2.PutText(colorMat, info, textPos, HersheyFonts.HersheySimplex, 0.5, CircleColor, 1);

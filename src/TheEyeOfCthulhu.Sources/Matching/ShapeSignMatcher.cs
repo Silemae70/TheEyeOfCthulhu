@@ -4,6 +4,8 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Matching;
 using TheEyeOfCthulhu.Sources.Processors;
 using CvPoint = OpenCvSharp.Point;
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
+using Size = OpenCvSharp.Size;
 
 namespace TheEyeOfCthulhu.Sources.Matching;
 
@@ -269,17 +271,17 @@ public class ShapeSignMatcher : IElderSignMatcher
 
         // Calculer le centre
         var moments = Cv2.Moments(matchedContour);
-        PointF position;
+        CorePointF position;
         if (moments.M00 > 0)
         {
-            position = new PointF(
+            position = new CorePointF(
                 (float)(moments.M10 / moments.M00) + offsetX,
                 (float)(moments.M01 / moments.M00) + offsetY);
         }
         else
         {
             var rect = Cv2.BoundingRect(matchedContour);
-            position = new PointF(rect.X + rect.Width / 2f + offsetX, rect.Y + rect.Height / 2f + offsetY);
+            position = new CorePointF(rect.X + rect.Width / 2f + offsetX, rect.Y + rect.Height / 2f + offsetY);
         }
 
         // Estimer l'échelle (ratio des aires)
@@ -300,10 +302,10 @@ public class ShapeSignMatcher : IElderSignMatcher
         var boundingRect = Cv2.BoundingRect(matchedContour);
         var corners = new[]
         {
-            new PointF(boundingRect.Left + offsetX, boundingRect.Top + offsetY),
-            new PointF(boundingRect.Right + offsetX, boundingRect.Top + offsetY),
-            new PointF(boundingRect.Right + offsetX, boundingRect.Bottom + offsetY),
-            new PointF(boundingRect.Left + offsetX, boundingRect.Bottom + offsetY)
+            new CorePointF(boundingRect.Left + offsetX, boundingRect.Top + offsetY),
+            new CorePointF(boundingRect.Right + offsetX, boundingRect.Top + offsetY),
+            new CorePointF(boundingRect.Right + offsetX, boundingRect.Bottom + offsetY),
+            new CorePointF(boundingRect.Left + offsetX, boundingRect.Bottom + offsetY)
         };
 
         Log($"Shape match '{elderSign.Name}': score {normalizedScore:P1} at ({position.X:F0}, {position.Y:F0})");

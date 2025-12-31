@@ -353,6 +353,41 @@
                     </Border>
                     
                     <!-- ═══════════════════════════════════════════ -->
+                    <!-- ÉTAPE 4 : TEST RITUAL (Nouveau!) -->
+                    <!-- ═══════════════════════════════════════════ -->
+                    <Border Background="#252526" CornerRadius="4" Padding="10" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="④ TEST RITUAL 🐙" 
+                                       Foreground="#CE9178" 
+                                       FontWeight="Bold" 
+                                       FontSize="12"
+                                       Margin="0,0,0,10" />
+                            
+                            <TextBlock Text="Testez l'architecture Ritual/Rune" 
+                                       Foreground="#888" 
+                                       FontSize="10"
+                                       Margin="0,0,0,8" />
+                            
+                            <Button x:Name="TestRitualButton" 
+                                    Content="🔮 Exécuter Ritual" 
+                                    Padding="10,8"
+                                    Margin="0,0,0,5"
+                                    Click="TestRitualButton_Click"
+                                    IsEnabled="False"
+                                    Background="#8B4513"
+                                    Foreground="White"
+                                    ToolTip="Exécute un Ritual de test avec l'ElderSign actuel" />
+                            
+                            <TextBlock x:Name="RitualResultText" 
+                                       Text="" 
+                                       Foreground="#CE9178"
+                                       TextWrapping="Wrap"
+                                       FontSize="10"
+                                       Margin="0,5,0,0" />
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- ═══════════════════════════════════════════ -->
                     <!-- OUTILS AVANCÉS (collapsed par défaut) -->
                     <!-- ═══════════════════════════════════════════ -->
                     <Expander Header="⚙️ Outils avancés" Foreground="#888" IsExpanded="False">

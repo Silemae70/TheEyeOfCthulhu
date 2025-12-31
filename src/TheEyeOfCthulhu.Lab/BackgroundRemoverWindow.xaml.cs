@@ -7,7 +7,7 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Sources.Processors;
 using CvRect = OpenCvSharp.Rect;
 using CvPoint = OpenCvSharp.Point;
-using PointF = TheEyeOfCthulhu.Core.Matching.PointF;
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
 using CorePixelFormat = TheEyeOfCthulhu.Core.PixelFormat;
 
 namespace TheEyeOfCthulhu.Lab;
@@ -20,7 +20,7 @@ public partial class BackgroundRemoverWindow : System.Windows.Window
     private readonly Frame _originalFrame;
     private Mat? _originalMat;
     private Mat? _maskMat;
-    private PointF[]? _contourPoints;
+    private CorePointF[]? _contourPoints;
     private double _currentZoom = 1.0;
     private const double ZoomStep = 0.1;
     private const double MinZoom = 0.1;
@@ -40,7 +40,7 @@ public partial class BackgroundRemoverWindow : System.Windows.Window
     /// <summary>
     /// Les points du contour extrait.
     /// </summary>
-    public PointF[]? ResultContour => _contourPoints;
+    public CorePointF[]? ResultContour => _contourPoints;
     
     /// <summary>
     /// Indique si l'utilisateur a appliqué les changements.
@@ -277,7 +277,7 @@ public partial class BackgroundRemoverWindow : System.Windows.Window
         var epsilon = 0.005 * Cv2.ArcLength(largest, true);
         var simplified = Cv2.ApproxPolyDP(largest, epsilon, true);
         
-        _contourPoints = simplified.Select(p => new PointF(p.X, p.Y)).ToArray();
+        _contourPoints = simplified.Select(p => new CorePointF(p.X, p.Y)).ToArray();
     }
 
     private void UpdatePreview()

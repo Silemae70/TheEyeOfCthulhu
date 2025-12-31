@@ -9,7 +9,7 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Sources.Processors;
 using CvPoint = OpenCvSharp.Point;
 using WpfPoint = System.Windows.Point;
-using PointF = TheEyeOfCthulhu.Core.Matching.PointF;
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
 using CorePixelFormat = TheEyeOfCthulhu.Core.PixelFormat;
 using CoreFrame = TheEyeOfCthulhu.Core.Frame;
 
@@ -52,7 +52,7 @@ public partial class ContourTracerWindow : System.Windows.Window
         Colors.LightGreen, Colors.Coral, Colors.Gold, Colors.Violet
     };
     
-    public PointF[]? ResultContour { get; private set; }
+    public CorePointF[]? ResultContour { get; private set; }
     public CoreFrame? ResultMask { get; private set; }
     public CoreFrame? ResultTemplate { get; private set; }
     public bool Applied { get; private set; }
@@ -456,7 +456,7 @@ public partial class ContourTracerWindow : System.Windows.Window
             finalPoints = SimplifyContour(finalPoints, 1.0 / 100.0);
         }
         
-        ResultContour = finalPoints.Select(p => new PointF((float)p.X, (float)p.Y)).ToArray();
+        ResultContour = finalPoints.Select(p => new CorePointF((float)p.X, (float)p.Y)).ToArray();
         
         CreateMaskAndTemplate();
         
@@ -508,7 +508,7 @@ public partial class ContourTracerWindow : System.Windows.Window
         return new OpenCvSharp.Rect(x, y, w, h);
     }
 
-    private string GetBoundingBox(PointF[] points)
+    private string GetBoundingBox(CorePointF[] points)
     {
         var minX = points.Min(p => p.X);
         var minY = points.Min(p => p.Y);

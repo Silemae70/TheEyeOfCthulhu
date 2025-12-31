@@ -4,6 +4,8 @@ using TheEyeOfCthulhu.Core;
 using TheEyeOfCthulhu.Core.Matching;
 using TheEyeOfCthulhu.Sources.Processors;
 
+using CorePointF = TheEyeOfCthulhu.Core.PointF;
+
 namespace TheEyeOfCthulhu.Sources.Matching;
 
 /// <summary>
@@ -264,7 +266,7 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
         }
     }
 
-    private (PointF Position, double Angle, double Scale, PointF[] Corners)? ExtractTransformFromHomography(
+    private (CorePointF Position, double Angle, double Scale, CorePointF[] Corners)? ExtractTransformFromHomography(
         Mat homography, ElderSign elderSign, CachedTemplate template, int offsetX = 0, int offsetY = 0)
     {
         if (homography.Empty() || homography.Rows != 3 || homography.Cols != 3)
@@ -290,7 +292,7 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
             return null;
 
         // Position = coin supérieur gauche transformé + offset ROI
-        var position = new PointF(transformedCorners[0].X + offsetX, transformedCorners[0].Y + offsetY);
+        var position = new CorePointF(transformedCorners[0].X + offsetX, transformedCorners[0].Y + offsetY);
 
         // Calculer l'angle (direction du bord supérieur)
         var dx = transformedCorners[1].X - transformedCorners[0].X;
@@ -303,7 +305,7 @@ public class FeatureSignMatcher : IElderSignMatcher, IDisposable
 
         // Convertir les coins en PointF Core (avec offset ROI)
         var coreCorners = transformedCorners
-            .Select(c => new PointF(c.X + offsetX, c.Y + offsetY))
+            .Select(c => new CorePointF(c.X + offsetX, c.Y + offsetY))
             .ToArray();
 
         return (position, angle, scale, coreCorners);

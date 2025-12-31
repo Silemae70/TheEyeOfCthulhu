@@ -7,6 +7,8 @@ using TheEyeOfCthulhu.Sources.Processors;
 using TheEyeOfCthulhu.Sources.Recording;
 using TheEyeOfCthulhu.Sources.Utilities;
 using TheEyeOfCthulhu.Sources.Webcam;
+using CvPoint = OpenCvSharp.Point;
+using CvSize = OpenCvSharp.Size;
 
 namespace TheEyeOfCthulhu.Console;
 
@@ -346,12 +348,12 @@ class Program
                     // Afficher résultat
                     using var processedMat = FrameViewer.FrameToMat(result.FinalFrame);
                     var info = $"Processed | {result.TotalProcessingTimeMs:F1}ms";
-                    Cv2.PutText(processedMat, info, new Point(10, 30), HersheyFonts.HersheySimplex, 0.7, Scalar.LimeGreen, 2);
+                    Cv2.PutText(processedMat, info, new CvPoint(10, 30), HersheyFonts.HersheySimplex, 0.7, Scalar.LimeGreen, 2);
 
                     if (result.AllMetadata.TryGetValue("ContourDetector.ContourCount", out var countObj))
                     {
                         var count = (int)countObj;
-                        Cv2.PutText(processedMat, $"Contours: {count}", new Point(10, 60), 
+                        Cv2.PutText(processedMat, $"Contours: {count}", new CvPoint(10, 60), 
                             HersheyFonts.HersheySimplex, 0.7, Scalar.Yellow, 2);
                     }
 
@@ -550,8 +552,8 @@ class Program
 
         // Dessiner quelques formes
         Cv2.Rectangle(testImage, new Rect(100, 100, 150, 100), new Scalar(255, 255, 255), -1);
-        Cv2.Circle(testImage, new Point(450, 200), 60, new Scalar(255, 255, 255), -1);
-        Cv2.Ellipse(testImage, new Point(300, 350), new Size(80, 40), 30, 0, 360, new Scalar(255, 255, 255), -1);
+        Cv2.Circle(testImage, new CvPoint(450, 200), 60, new Scalar(255, 255, 255), -1);
+        Cv2.Ellipse(testImage, new CvPoint(300, 350), new CvSize(80, 40), 30, 0, 360, new Scalar(255, 255, 255), -1);
 
         var frameData = new byte[testImage.Rows * testImage.Step()];
         System.Runtime.InteropServices.Marshal.Copy(testImage.Data, frameData, 0, frameData.Length);
